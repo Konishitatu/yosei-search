@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- 外部との通信をブラウザに禁止させる設定（CSP）。読み込んだPDFの内容が外へ出ない構造を保証します -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: 'self'; base-uri 'none'; form-action 'none'">
 <title>予製カード検索</title>
+<!-- iPadのホーム画面に追加したときのアイコンと名前（アイコンの画像は同じ場所に置く yosei-icon.png） -->
+<link rel="apple-touch-icon" href="yosei-icon.png">
+<meta name="apple-mobile-web-app-title" content="予製カード検索">
 <style>
 :root{
   --bg:#f3f2ee; --card:#fff; --ink:#1c2329; --muted:#56616c; --line:#d6d3cb; --soft:#eceae4;
@@ -113,6 +116,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 .dlg-info h4{margin:14px 0 6px;font-size:16px;color:var(--muted)}
 .raw{margin:0;padding:10px 12px 10px 2.2em;background:#f7f6f2;border-radius:8px;font-size:15px}
 .raw li{margin:2px 0;word-break:break-all}
+.raw .sep{color:var(--accent);font-weight:700;margin:0 .5em}
 @media (max-width:700px){
   h1{font-size:23px}
   .res{grid-template-columns:minmax(0,1fr)}
@@ -169,7 +173,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
         </div>
       </div>
       <div class="frow" id="rangeRow" hidden><span class="flabel"></span>
-        <input type="date" id="dFrom" aria-label="この日から"> 〜 <input type="date" id="dTo" aria-label="この日まで">
+        〜 <input type="date" id="dTo" aria-label="この日まで"> まで
       </div>
       <div class="frow"><span class="flabel">並び順</span>
         <div class="chips" id="sortChips">
@@ -200,7 +204,8 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
     <ul>
       <li><b>薬で探す</b>：薬品名の一部と規格の数字をスペースで区切って入れます（例：<b>アムロジピン 5</b>）。「錠」「mg」は入れても入れなくても同じ結果です。ひらがなとカタカナ、全角と半角の違いは区別しません。メーカー名（例：サワイ）でも絞り込めます。</li>
       <li>数字は「その数字そのもの」だけに当たります。「5」で探しても「2.5」や「500」は出てきません。</li>
-      <li><b>来局予想日</b>：「明日以降」などを選ぶと、近いうちにお渡しする予製を結果から外せます。日付だけを選んで薬品名を空にすると、その期間のカードを一覧できます。</li>
+      <li><b>来局予想日</b>：「明日以降」などを選ぶと、近いうちにお渡しする予製を結果から外せます。「日付を指定」では、選んだ日までに来局予定のカードだけを表示します。薬品名を空にすると、条件に合うカードを一覧できます。</li>
+      <li>薬を2列に並べたカードや、スペースを2つ以上空けて並べた薬も、1剤ずつ別々に読み取ります。「読み取った文字（そのまま）」では、区切った位置を「｜」で表示します。</li>
       <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日（550327 や 55.3.27）・医療機関名で探せます。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
@@ -224,7 +229,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.06-2';
+const APP_VERSION = 'v2026.11.06-4';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -839,6 +844,11 @@ function decodeShow(fi, s) {
 }
 
 function widthOf(fi, code) {
+  if (fi.cid && !fi.predef && !fi.wmap && fi.japan1) {
+    // GoodNotesのPDFには文字の幅の情報がないので、Adobe-Japan1の文字番号のまとまりからおおよその幅を決める
+    // （1〜230：英数字・記号＝やや狭い、231〜632：半角＝半分、それ以外：全角）
+    return code === 1 ? 250 : code < 231 ? 550 : code < 633 ? 500 : 1000;
+  }
   if (fi.cid) return fi.predef ? fi.dw : (fi.wmap && fi.wmap.has(code) ? fi.wmap.get(code) : fi.dw);
   if (fi.wArr) { const w = fi.wArr[code - fi.first]; return w === undefined ? fi.missing : w; }
   return 500;
@@ -883,7 +893,7 @@ async function interpret(pdf, content, resources, ctm0, ctx, depth, gs0) {
     }
     tm = mul([1, 0, 0, 1, adv, 0], tm);
     const trm2 = mul(tm, gs.ctm);
-    ctx.runs.push({ x0: trm[4], y0: trm[5], x1: trm2[4], size: Math.abs(gs.fs) * Math.hypot(trm[2], trm[3]), text });
+    ctx.runs.push({ x0: trm[4], y0: trm[5], x1: trm2[4], size: Math.abs(gs.fs) * Math.hypot(trm[2], trm[3]), text, blk: ctx.blk });
   };
   const nextLine = () => { tlm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); tm = tlm.slice(); };
 
@@ -927,7 +937,7 @@ async function interpret(pdf, content, resources, ctm0, ctx, depth, gs0) {
       case 'q': stack.push(Object.assign({}, gs, { ctm: gs.ctm.slice() })); break;
       case 'Q': if (stack.length) gs = stack.pop(); break;
       case 'cm': if ((a = nums(ops, 6))) gs.ctm = mul(a, gs.ctm); break;
-      case 'BT': tm = [1, 0, 0, 1, 0, 0]; tlm = [1, 0, 0, 1, 0, 0]; break;
+      case 'BT': tm = [1, 0, 0, 1, 0, 0]; tlm = [1, 0, 0, 1, 0, 0]; ctx.blk = (ctx.blk || 0) + 1; break;
       case 'Tf': {
         const nm = ops[ops.length - 2], sz = ops[ops.length - 1];
         if (nm instanceof PName && fontsDict instanceof PDict && fontsDict.has(nm.n)) gs.font = await loadFont(pdf, fontsDict.get(nm.n), ctx.fontCache);
@@ -977,11 +987,17 @@ function buildLines(runs) {
   }
   for (const l of lines) {
     l.runs.sort((a, b) => a.x0 - b.x0);
-    let text = '', prevEnd = null;
+    let text = '', prevEnd = null, prev = null;
     for (const r of l.runs) {
-      if (prevEnd !== null && r.x0 - prevEnd > 0.25 * l.size) text += ' ';
+      if (prev) {
+        const gap = r.x0 - prevEnd;
+        // 同じ高さでも、別の文字ボックス（2列目など）から来た文字や大きく離れた文字は、別の項目として区切る（タブで区切る）
+        if ((r.blk !== prev.blk && gap > 0.3 * l.size) || gap > 2 * l.size) text += '\t';
+        else if (gap > 0.25 * l.size) text += ' ';
+      }
       text += r.text;
       prevEnd = prevEnd === null ? r.x1 : Math.max(prevEnd, r.x1);
+      prev = r;
     }
     l.text = text;
   }
@@ -1025,10 +1041,30 @@ function takeBirth(rest) {
   return { birth: { era, yy, mm, dd }, rest: rest.slice(0, bm.index).trim() };
 }
 
+// 薬の行を1剤ずつに分ける（2列に並べた薬や、スペース2つ以上で区切った薬を別々にする）
+const QTY_RE = /^[\d.\/×x*~〜()-]+\s*(錠|t|c|包|個|本|枚|キット|日分|日)?$/i;
+function splitDrugs(lines) {
+  const out = [];
+  for (const line of lines) {
+    const segs = [];
+    for (const p of line.split('\t').map(x => x.trim()).filter(Boolean)) {
+      // 「メーカー」だけ・数量だけの部分は、前の薬にくっつける
+      if (segs.length && /^[「(]/.test(p)) segs[segs.length - 1] += p;
+      else if (segs.length && QTY_RE.test(p)) segs[segs.length - 1] += ' ' + p;
+      else segs.push(p);
+    }
+    out.push(...segs);
+  }
+  return out.filter(x => /[\p{L}\p{N}]/u.test(x));
+}
+const untab = x => x.replace(/\t/g, ' ').replace(/ {2,}/g, ' ').trim();
+
 function parseCardText(lineTexts) {
   const items = [];
   for (const raw of lineTexts) {
-    const n = raw.replace(/[ ​﻿]/g, '').normalize('NFKC').replace(/\s+/g, ' ').trim();
+    // スペース2つ以上やタブは「区切り」（タブ）として残し、それ以外のスペースは1つにそろえる
+    const n = raw.replace(/[\u200a\u200b\ufeff]/g, '').normalize('NFKC')
+      .replace(/[ \u00a0]{2,}/g, '\t').replace(/[ \u00a0]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
     if (!/[\p{L}\p{N}]/u.test(n)) continue;
     // 折り返しで「「ニプロ」」などが次の行に回ったときは、前の行につなげる
     if (items.length && /^[「(]/.test(n) && !isDateLine(items[items.length - 1])) items[items.length - 1] += n;
@@ -1039,22 +1075,22 @@ function parseCardText(lineTexts) {
   const di = items.findIndex(isDateLine);
   if (di < 0) {
     r.issues.push('来局予想日の行が見つかりません');
-    r.drugs = items.slice();
+    r.drugs = splitDrugs(items);
     return r;
   }
-  r.hospital = items.slice(0, di).join(' ');
+  r.hospital = items.slice(0, di).map(untab).join(' ');
   const m = DATE_RE.exec(items[di]);
   r.month = +m[1]; r.day = +m[2];
-  let rest = m[3].trim();
+  let rest = untab(m[3]);
   let drugStart = di + 1;
   // 日付だけの行で、次の行に氏名がある場合
-  if (!rest && items[di + 1] && (/\(.*\)/.test(items[di + 1]) || takeBirth(items[di + 1]))) { rest = items[di + 1]; drugStart = di + 2; }
+  if (!rest && items[di + 1] && (/\(.*\)/.test(items[di + 1]) || takeBirth(untab(items[di + 1])))) { rest = untab(items[di + 1]); drugStart = di + 2; }
   const b = takeBirth(rest);
   if (b) { r.birth = b.birth; rest = b.rest; }
   const km = /\(([^()]*)\)/.exec(rest);
   if (km) { r.kana = km[1].replace(/\s+/g, ' ').trim(); rest = (rest.slice(0, km.index) + ' ' + rest.slice(km.index + km[0].length)).trim(); }
   r.name = rest.replace(/\s+/g, ' ').trim();
-  r.drugs = items.slice(drugStart);
+  r.drugs = splitDrugs(items.slice(drugStart));
   if (!r.name) r.issues.push('氏名が読み取れません');
   if (!r.drugs.length) r.issues.push('薬の行がありません');
   if (!r.birth) r.warns.push('生年月日なし');
@@ -1466,8 +1502,8 @@ function passDate(v) {
   if (md === 'd1') return v.diff >= 1;
   if (md === 'd3') return v.diff >= 3;
   if (md === 'd7') return v.diff >= 7;
-  const from = parseISODate($('#dFrom').value), to = parseISODate($('#dTo').value);
-  if (from && v.date < from) return false;
+  // 「日付を指定」：選んだ日まで（その日を含む）に来局予定のカード
+  const to = parseISODate($('#dTo').value);
   if (to && v.date > to) return false;
   return true;
 }
@@ -1625,7 +1661,7 @@ function openCard(id) {
     '<h4>カードの薬（' + c.drugs.length + ' 件）</h4>' +
     (c.drugs.length ? '<ul class="res-drugs">' + c.drugs.map(d => '<li>' + esc(d.text) + '</li>').join('') + '</ul>' : '<p>—</p>') +
     '<h4>PDFから読み取った文字（そのまま）</h4>' +
-    (c.rawLines.length ? '<ol class="raw">' + c.rawLines.map(l => '<li>' + esc(l) + '</li>').join('') + '</ol>' : '<p>—</p>');
+    (c.rawLines.length ? '<ol class="raw">' + c.rawLines.map(l => '<li>' + esc(l).replace(/\t/g, '<span class="sep">｜</span>') + '</li>').join('') + '</ol>' : '<p>—</p>');
   const box = $('#dlgPhoto');
   if (state.photoUrl) { URL.revokeObjectURL(state.photoUrl); state.photoUrl = null; }
   const seq = ++state.dlgSeq;
@@ -1713,7 +1749,6 @@ function init() {
     for (const x of document.querySelectorAll('#sortChips .chip')) x.classList.toggle('on', x === b);
     renderTab();
   });
-  $('#dFrom').addEventListener('change', renderDrug);
   $('#dTo').addEventListener('change', renderDrug);
   $('#onlyIssues').addEventListener('change', renderCheck);
 
