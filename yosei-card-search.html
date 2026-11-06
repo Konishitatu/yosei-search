@@ -30,6 +30,7 @@ h1{font-size:26px;margin:0;letter-spacing:.02em}
 .title{display:flex;align-items:baseline;flex:1 1 auto}
 .loadbar{display:flex;flex-wrap:wrap;gap:8px}
 .status{margin:6px 0 12px;color:var(--muted);font-size:16px}
+.upd{color:var(--ink);background:var(--accent-weak);border-radius:6px;padding:1px 8px;font-size:17px}
 .btn{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:17px;min-height:46px;padding:8px 16px;border-radius:8px;cursor:pointer;line-height:1.3}
 .btn:hover{border-color:#a9a59b}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
@@ -117,6 +118,17 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 .raw{margin:0;padding:10px 12px 10px 2.2em;background:#f7f6f2;border-radius:8px;font-size:15px}
 .raw li{margin:2px 0;word-break:break-all}
 .raw .sep{color:var(--accent);font-weight:700;margin:0 .5em}
+.btn.gear{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff}
+.btn.gear svg{color:var(--muted)}
+.btn.danger{border-color:var(--danger-ink);color:var(--danger-ink);background:#fff;font-weight:700}
+.setdlg{width:min(640px,96vw)}
+.set-body{padding:8px 18px 18px;overflow:auto;max-height:calc(94vh - 68px)}
+.set-sec{padding:12px 0;border-bottom:1px solid var(--soft)}
+.set-sec:last-child{border-bottom:none}
+.set-sec h4{margin:0 0 6px;font-size:18px}
+.set-sec .note{margin:4px 0 10px}
+.set-status{margin:0;font-size:16px}
+.warnsec h4{color:var(--danger-ink)}
 @media (max-width:700px){
   h1{font-size:23px}
   .res{grid-template-columns:minmax(0,1fr)}
@@ -131,11 +143,11 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 <div class="wrap">
   <header class="top">
     <div class="title"><h1>予製カード検索</h1><span class="ver" id="ver"></span></div>
-    <div class="loadbar">
-      <button class="btn primary" id="btnFiles" type="button">PDF・ZIPを読み込む</button>
-      <button class="btn" id="btnFolder" type="button">フォルダーごと読み込む</button>
-      <button class="btn ghost" id="btnClear" type="button" hidden>読み込んだ内容を消す</button>
-    </div>
+    <!-- 読み込み・消去は、間違えて触らないように「設定」の中に入れる -->
+    <button class="btn gear" id="btnSettings" type="button" aria-label="設定を開く">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="6.4"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(45 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(90 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(135 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(180 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(225 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(270 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="2.7" fill="#fff"/></svg>
+      <span>設定</span>
+    </button>
     <input id="inFiles" class="vh" type="file" accept="application/pdf,.pdf,application/zip,.zip" multiple tabindex="-1" aria-hidden="true">
     <input id="inFolder" class="vh" type="file" webkitdirectory multiple tabindex="-1" aria-hidden="true">
   </header>
@@ -146,12 +158,12 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
     <h2>はじめに：予製カードのPDFを読み込んでください</h2>
     <ol>
       <li>予製カードのPDFを用意します。たくさんある場合は、フォルダーごと<b>ZIP</b>（ジップ：複数のファイルを1つにまとめたもの）にすると、1回で選べます</li>
-      <li>上の「PDF・ZIPを読み込む」を押して、ZIP（またはPDF。複数選べます）を選びます</li>
+      <li>右上の「設定」（歯車のマーク）を押し、「PDF・ZIPを読み込む」でPDF（またはZIP。複数選べます）を選びます</li>
       <li>読み込みが終わると、薬や患者さんで探せるようになります</li>
     </ol>
+    <p><button class="btn primary" type="button" id="btnOpenSettings">設定を開く</button></p>
     <p class="note">iPadでは「ファイル」アプリの画面が開くので、「Documents」や「このiPad内」からZIP（またはPDF）を選びます。ZIPは「ドキュメント」アプリや「ファイル」アプリで、フォルダーを圧縮すると作れます。パソコンでは、Google Driveのフォルダーをダウンロードすると自動でZIPになります。</p>
     <p class="note">読み取った内容は、この端末の中に記憶します。次からは開くだけで検索できます。データを入れ直したときは、もう一度読み込んでください（前の内容とまるごと入れ替わります）。</p>
-    <p class="note" id="dropNote">パソコンでは、PDF・ZIP・フォルダーをこの画面にドラッグ（マウスでつかんで重ねる）しても読み込めます。</p>
   </section>
 
   <nav class="tabs" id="tabs" hidden>
@@ -166,9 +178,6 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <div class="frow"><span class="flabel">来局予想日</span>
         <div class="chips" id="dateChips">
           <button type="button" class="chip on" data-mode="all">すべて</button>
-          <button type="button" class="chip" data-mode="d1">明日以降</button>
-          <button type="button" class="chip" data-mode="d3">3日後以降</button>
-          <button type="button" class="chip" data-mode="d7">1週間後以降</button>
           <button type="button" class="chip" data-mode="range">日付を指定</button>
         </div>
       </div>
@@ -177,8 +186,8 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       </div>
       <div class="frow"><span class="flabel">並び順</span>
         <div class="chips" id="sortChips">
-          <button type="button" class="chip on" data-sort="asc">来局が近い順</button>
-          <button type="button" class="chip" data-sort="desc">来局が遠い順</button>
+          <button type="button" class="chip on" data-sort="asc">来局予想日の早い順</button>
+          <button type="button" class="chip" data-sort="desc">来局予想日の遅い順</button>
         </div>
       </div>
     </div>
@@ -204,20 +213,45 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
     <ul>
       <li><b>薬で探す</b>：薬品名の一部と規格の数字をスペースで区切って入れます（例：<b>アムロジピン 5</b>）。「錠」「mg」は入れても入れなくても同じ結果です。ひらがなとカタカナ、全角と半角の違いは区別しません。メーカー名（例：サワイ）でも絞り込めます。</li>
       <li>数字は「その数字そのもの」だけに当たります。「5」で探しても「2.5」や「500」は出てきません。</li>
-      <li><b>来局予想日</b>：「明日以降」などを選ぶと、近いうちにお渡しする予製を結果から外せます。「日付を指定」では、選んだ日までに来局予定のカードだけを表示します。薬品名を空にすると、条件に合うカードを一覧できます。</li>
+      <li><b>来局予想日</b>：「日付を指定」を選んで日付を入れると、その日までに来局予定のカードだけを表示します。薬品名を空にすると、その日までのカードを一覧できます。</li>
+      <li><b>並び順</b>：「来局予想日の早い順」は、来局予想日が今日に近いカードから並べます。「来局予想日の遅い順」は、先の日付のカードから並べます。</li>
       <li>薬を2列に並べたカードや、スペースを2つ以上空けて並べた薬も、1剤ずつ別々に読み取ります。「読み取った文字（そのまま）」では、区切った位置を「｜」で表示します。</li>
       <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日（550327 や 55.3.27）・医療機関名で探せます。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
-      <li><b>データの更新</b>：PDFを入れ直したら、「PDF・ZIPを読み込む」でもう一度読み込みます。前の内容とまるごと入れ替わり、この端末の記憶も新しくなります。画面上の「いちばん新しいPDF」の日時で、いつのデータかを確かめられます。</li>
+      <li><b>データの更新</b>：PDFを入れ直したら、右上の「設定」（歯車のマーク）→「PDF・ZIPを読み込む」でもう一度読み込みます。前の内容とまるごと入れ替わり、この端末の記憶も新しくなります。画面の上に出る「◯/◯ 来局分まで更新済み」は、PDFのファイル名に入っている日付です（その日に来局した患者さんまで、カードを更新してあるという意味）。ファイル名に日付がないときは、「いちばん新しいPDF」の作成日時を表示します。</li>
     </ul>
   </details>
-  <p class="foot">読み込んだPDFは、この端末の中だけで読み取ります。インターネットには送信しません（外部と通信できない設定にしています）。読み取った内容とカードの写真は、次に開いたときすぐ使えるよう、この端末の中に記憶します。消したいときは「読み込んだ内容を消す」を押してください。</p>
+  <p class="foot">読み込んだPDFは、この端末の中だけで読み取ります。インターネットには送信しません（外部と通信できない設定にしています）。読み取った内容とカードの写真は、次に開いたときすぐ使えるよう、この端末の中に記憶します。消したいときは、右上の「設定」にある「読み込んだ内容を消す」を押してください。</p>
 </div>
 
 <div class="overlay" id="progress" hidden>
   <div class="pbox"><p id="pText">読み込み中…</p><div class="pbar"><div id="pFill"></div></div></div>
 </div>
+
+<dialog id="setDlg" class="setdlg" aria-labelledby="setTitle">
+  <div class="dlg-head"><h3 id="setTitle">設定</h3><button class="btn small" type="button" id="setClose">閉じる</button></div>
+  <div class="set-body">
+    <section class="set-sec">
+      <h4>データの読み込み</h4>
+      <p class="note">予製カードのPDF（またはZIP）を読み込みます。読み込むと、前の内容とまるごと入れ替わります。</p>
+      <div class="loadbar">
+        <button class="btn primary" id="btnFiles" type="button">PDF・ZIPを読み込む</button>
+        <button class="btn" id="btnFolder" type="button">フォルダーごと読み込む</button>
+      </div>
+      <p class="note" id="dropNote">パソコンでは、この画面を開いているときに、PDF・ZIP・フォルダーをドラッグ（マウスでつかんで重ねる）しても読み込めます。</p>
+    </section>
+    <section class="set-sec">
+      <h4>今のデータ</h4>
+      <p id="setStatus" class="set-status"></p>
+    </section>
+    <section class="set-sec warnsec" id="clearSec">
+      <h4>データを消す</h4>
+      <p class="note">この端末に記憶している予製カードの内容と写真を消します。消したあとは、もう一度読み込むまで検索できません。</p>
+      <button class="btn danger" id="btnClear" type="button">読み込んだ内容を消す</button>
+    </section>
+  </div>
+</dialog>
 
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <div class="dlg-head"><h3 id="dlgTitle"></h3><button class="btn small" type="button" id="dlgClose">閉じる</button></div>
@@ -229,7 +263,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.06-4';
+const APP_VERSION = 'v2026.11.06-6';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1188,6 +1222,28 @@ const fmtMD = d => (d.getMonth() + 1) + '/' + d.getDate();
 const fmtYMD = d => d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）';
 const fmtBirth = b => b.era + b.yy + '.' + pad2(b.mm) + '.' + pad2(b.dd);
 const fmtDT = d => (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+// ファイル名から日付を読む（例：予製カード1106.pdf、2026-11-06.pdf、11.6.pdf、11月6日.pdf、R8.11.6.pdf）
+function dateFromName(name, ref) {
+  const base = String(name || '').split('/').pop().replace(/\.(pdf|zip)$/i, '').normalize('NFKC');
+  let m, y = null, mo = 0, d = 0;
+  if ((m = /(20\d{2})[-_.\/年 ]?(\d{1,2})[-_.\/月 ]?(\d{1,2})日?/.exec(base))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /(?:R|令和)\s*(\d{1,2})[-_.\/年 ](\d{1,2})[-_.\/月 ](\d{1,2})日?/i.exec(base))) { y = 2018 + +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /(?:^|\D)(\d{1,2})[-_.\/月](\d{1,2})日?(?:\D|$)/.exec(base))) { mo = +m[1]; d = +m[2]; }
+  else if ((m = /(?:^|\D)(\d{2})(\d{2})(\d{2})(?:\D|$)/.exec(base)) && +m[1] >= 20 && +m[1] <= 39) { y = 2000 + +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /(?:^|\D)(\d{2})(\d{2})(?:\D|$)/.exec(base))) { mo = +m[1]; d = +m[2]; }
+  else return null;
+  if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+  if (y === null) {
+    const v = inferVisit({ month: mo, day: d }, ref || todayMidnight());
+    return v ? v.date : null;
+  }
+  const dt = new Date(y, mo - 1, d);
+  return dt.getMonth() === mo - 1 ? dt : null;
+}
+function fileDate(f) {
+  const r = f.created ? new Date(f.created.getFullYear(), f.created.getMonth(), f.created.getDate()) : null;
+  return dateFromName(f.key, r) || (f.zip ? dateFromName(f.zip, r) : null);
+}
 function parseISODate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
 
 /* =========================================================
@@ -1279,7 +1335,7 @@ function buildMeta() {
   const idx = new Map(state.files.map((f, i) => [f, i]));
   return {
     schema: SCHEMA, gen: state.gen, loadedAt: state.loadedAt.getTime(),
-    files: state.files.map(f => ({ key: f.key, created: f.created ? f.created.getTime() : null, pages: f.pages, error: f.error, blank: f.blank || 0 })),
+    files: state.files.map(f => ({ key: f.key, zip: f.zip || '', created: f.created ? f.created.getTime() : null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0 })),
     cards: state.cards.map(c => ({
       id: c.id, f: idx.get(c.fileRec), page: c.page, rawLines: c.rawLines, month: c.month, day: c.day,
       name: c.name, kana: c.kana, birth: c.birth, hospital: c.hospital, drugs: c.drugs.map(d => d.text),
@@ -1296,7 +1352,7 @@ async function restoreSaved() {
   if (!meta || meta.schema !== SCHEMA || !Array.isArray(meta.cards)) return false;
   if (state.loading || state.files.length) return false; // すでに新しく読み込み始めている
   state.gen = meta.gen;
-  state.files = meta.files.map(f => ({ key: f.key, file: null, ent: null, pages: f.pages, error: f.error, blank: f.blank || 0, created: f.created ? new Date(f.created) : null }));
+  state.files = meta.files.map(f => ({ key: f.key, zip: f.zip || '', file: null, ent: null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0, created: f.created ? new Date(f.created) : null }));
   let maxId = 0;
   state.cards = meta.cards.map(s => {
     maxId = Math.max(maxId, s.id);
@@ -1405,6 +1461,8 @@ async function loadFiles(entries) {
         // 文字も写真もない白紙のページ（表紙・余りのページなど）はカードとして数えない
         if (!images.length && !lines.some(l => /[\p{L}\p{N}]/u.test(l.text))) { rec.blank = (rec.blank || 0) + 1; continue; }
         const card = makeCard(rec, p + 1, lines, images);
+        // ノートをまるごと書き出したPDF（3ページ以上）の最初と最後のページは、カードの形でなければ数えない（表紙・ブックマーク用のページ）
+        if (pages.length >= 3 && (p === 0 || p === pages.length - 1) && card.month == null) { rec.skipped = (rec.skipped || 0) + 1; continue; }
         state.cards.push(card);
         if (card.photo && saveOk) {
           pending.push([state.gen + ':' + card.id, new Blob([pdf.u8.slice(card.photo.ss, card.photo.se)], { type: 'image/jpeg' })]);
@@ -1471,18 +1529,31 @@ function renderAll() {
   const has = state.files.length > 0;
   $('#empty').hidden = has;
   $('#tabs').hidden = !has;
-  $('#btnClear').hidden = !has;
+  $('#clearSec').hidden = !has;
   if (!has) {
     $('#status').textContent = 'まだPDFを読み込んでいません';
+    $('#setStatus').textContent = 'まだ読み込んでいません。';
     for (const id of ['drug', 'patient', 'check']) $('#tab-' + id).hidden = true;
     $('#notice').innerHTML = '';
     return;
   }
   const t = state.loadedAt;
   const newest = state.files.reduce((m, f) => (f.created && (!m || f.created > m) ? f.created : m), null);
-  $('#status').textContent = (state.restored ? 'この端末に記憶している内容' : '読み込み済み') + '：カード ' + state.cards.length + ' 枚（PDF ' + state.files.length + ' 件）／' +
-    fmtDT(t) + ' に読み込み' + (newest ? '／いちばん新しいPDF：' + fmtDT(newest) + ' 作成' : '') +
-    (state.saved === false ? '（この端末には記憶していません）' : '');
+  // ファイル名の日付＝その日に来局した患者さんまでカードを更新してある、という意味
+  const fdates = state.files.filter(f => !f.error).map(fileDate).filter(Boolean);
+  let upd = '';
+  if (fdates.length) {
+    const min = fdates.reduce((a, b) => (a < b ? a : b)), max = fdates.reduce((a, b) => (a > b ? a : b));
+    upd = '<b class="upd">' + fmtMD(min) + '（' + WD[min.getDay()] + '）来局分まで更新済み</b>' +
+      (max > min ? '（ファイルによって ' + fmtMD(min) + '〜' + fmtMD(max) + '）' : '') + '／';
+  }
+  $('#status').innerHTML = upd + esc((state.restored ? 'この端末に記憶している内容' : '読み込み済み') + '：カード ' + state.cards.length + ' 枚（PDF ' + state.files.length + ' 件）／' +
+    fmtDT(t) + ' に読み込み' + (!upd && newest ? '／いちばん新しいPDF：' + fmtDT(newest) + ' 作成' : '') +
+    (state.saved === false ? '（この端末には記憶していません）' : ''));
+  const names = state.files.length <= 5 ? state.files.map(f => f.zip ? f.zip + '：' + f.key : f.key) : [];
+  $('#setStatus').innerHTML = (upd ? upd.replace(/／$/, '') + '<br>' : '') + esc('カード ' + state.cards.length + ' 枚（PDF ' + state.files.length + ' 件）。' + fmtDT(t) + ' に読み込みました。' +
+    (newest ? 'いちばん新しいPDFは ' + fmtDT(newest) + ' 作成です。' : '') + (state.saved === false ? 'この端末には記憶していません。' : 'この端末に記憶しています。')) +
+    (names.length ? '<br>' + esc('ファイル名：' + names.join('、')) : '');
   const nIssue = state.cards.filter(cardHasIssue).length + state.files.filter(f => f.error).length;
   const bd = $('#issueBadge');
   bd.hidden = !nIssue; bd.textContent = nIssue;
@@ -1499,9 +1570,6 @@ function passDate(v) {
   const md = state.mode;
   if (md === 'all') return true;
   if (!v) return false;
-  if (md === 'd1') return v.diff >= 1;
-  if (md === 'd3') return v.diff >= 3;
-  if (md === 'd7') return v.diff >= 7;
   // 「日付を指定」：選んだ日まで（その日を含む）に来局予定のカード
   const to = parseISODate($('#dTo').value);
   if (to && v.date > to) return false;
@@ -1552,8 +1620,10 @@ function renderDrug() {
   const parts = parseDrugQuery(q);
   const today = todayMidnight();
   const sumEl = $('#drugSummary'), listEl = $('#drugResults');
-  if (!parts.length && state.mode === 'all') {
-    sumEl.innerHTML = '<p class="hint">薬品名を入れると、その薬が入っている予製カードが出ます（例：アムロジピン 5）。<br>薬品名を空にして日付の条件を選ぶと、その期間のカードを一覧できます。</p>';
+  if (!parts.length && (state.mode === 'all' || !$('#dTo').value)) {
+    sumEl.innerHTML = state.mode === 'all'
+      ? '<p class="hint">薬品名を入れると、その薬が入っている予製カードが出ます（例：アムロジピン 5）。<br>薬品名を空にして「日付を指定」で日付を入れると、その日までのカードを一覧できます。</p>'
+      : '<p class="hint">日付を入れると、その日までに来局予定のカードが出ます。薬品名を入れると、その薬が入っているカードだけにしぼれます。</p>';
     listEl.innerHTML = '';
     return;
   }
@@ -1606,8 +1676,11 @@ function renderCheck() {
   const nIssue = all.filter(cardHasIssue).length;
   const errs = state.files.filter(f => f.error);
   const blank = state.files.reduce((n, f) => n + (f.blank || 0), 0);
+  const skipped = state.files.reduce((n, f) => n + (f.skipped || 0), 0);
   $('#checkSummary').innerHTML = '<p>読み込んだPDF <b>' + state.files.length + '</b> 件／カード <b>' + all.length + '</b> 枚／確認が必要 <b>' + nIssue + '</b> 枚' + (errs.length ? '／読めなかったPDF <b>' + errs.length + '</b> 件' : '') + '</p>' +
-    '<p class="variants">1ページを1枚のカードとして読み取っています。赤い行は内容を確かめてください。' + (blank ? '文字も写真もない白紙のページ（' + blank + ' ページ）は数えていません。' : '') + '</p>';
+    '<p class="variants">1ページを1枚のカードとして読み取っています。赤い行は内容を確かめてください。' +
+    (skipped ? 'ノートの最初と最後にある、カードではないページ（表紙・ブックマーク用のページ：' + skipped + ' ページ）は数えていません。' : '') +
+    (blank ? '文字も写真もない白紙のページ（' + blank + ' ページ）は数えていません。' : '') + '</p>';
   const rows = all.filter(c => !only || cardHasIssue(c));
   let html = '<thead><tr><th>No.</th><th>ファイル</th><th>来局予想日</th><th>氏名</th><th>生年月日</th><th>医療機関</th><th>薬</th><th>写真</th><th>確認事項</th><th></th></tr></thead><tbody>';
   rows.forEach((c) => {
@@ -1720,14 +1793,23 @@ function init() {
   if (isIOS || !('webkitdirectory' in document.createElement('input'))) $('#btnFolder').hidden = true;
   if (isIOS) $('#dropNote').hidden = true;
 
+  // 設定（読み込み・消去はここにまとめ、ふだんの画面には出さない）
+  const setDlg = $('#setDlg');
+  const openSettings = () => { closeDlg(); if (!setDlg.open) setDlg.showModal(); };
+  const closeSettings = () => { if (setDlg.open) setDlg.close(); };
+  $('#btnSettings').addEventListener('click', openSettings);
+  $('#btnOpenSettings').addEventListener('click', openSettings);
+  $('#setClose').addEventListener('click', closeSettings);
+  setDlg.addEventListener('click', e => { if (e.target === setDlg) closeSettings(); });
+
   $('#btnFiles').addEventListener('click', () => $('#inFiles').click());
   $('#btnFolder').addEventListener('click', () => $('#inFolder').click());
-  $('#inFiles').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: '' })); e.target.value = ''; loadFiles(fs); });
-  $('#inFolder').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: f.webkitRelativePath || '' })); e.target.value = ''; loadFiles(fs); });
+  $('#inFiles').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: '' })); e.target.value = ''; if (fs.length) { closeSettings(); loadFiles(fs); } });
+  $('#inFolder').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: f.webkitRelativePath || '' })); e.target.value = ''; if (fs.length) { closeSettings(); loadFiles(fs); } });
   $('#btnClear').addEventListener('click', async () => {
     if (!window.confirm('読み込んだ内容を、この端末の記憶からも消します。よろしいですか？\n（もう一度使うときは、PDF・ZIPを読み込み直します）')) return;
     state.files = []; state.cards = []; state.gen = ''; state.restored = false; state.saved = null;
-    closeDlg();
+    closeDlg(); closeSettings();
     try { await clearSaved(); } catch (e) { /* 記憶がない場合など */ }
     renderAll();
     showNotice('この端末から消しました。', 'ok');
@@ -1762,14 +1844,17 @@ function init() {
   $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) closeDlg(); });
   $('#dlg').addEventListener('close', () => { if (state.photoUrl) { URL.revokeObjectURL(state.photoUrl); state.photoUrl = null; } $('#dlgPhoto').innerHTML = ''; });
 
-  // パソコン：ファイルやフォルダーのドラッグで読み込む
+  // パソコン：ファイルやフォルダーのドラッグで読み込む（設定を開いているときと、まだ何も読み込んでいないときだけ）
   let dragDepth = 0;
-  document.addEventListener('dragenter', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { dragDepth++; document.body.classList.add('dragging'); } });
+  const dropAllowed = () => setDlg.open || !state.files.length;
+  document.addEventListener('dragenter', e => { if (dropAllowed() && e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { dragDepth++; document.body.classList.add('dragging'); } });
   document.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('dragging'); });
   document.addEventListener('dragover', e => e.preventDefault());
   document.addEventListener('drop', async e => {
     e.preventDefault();
     dragDepth = 0; document.body.classList.remove('dragging');
+    if (!dropAllowed()) return;
+    closeSettings();
     const dt = e.dataTransfer; if (!dt) return;
     const entries = Array.from(dt.items || []).map(it => (it.webkitGetAsEntry ? it.webkitGetAsEntry() : null)).filter(Boolean);
     const out = [];
