@@ -47,10 +47,12 @@ h1{font-size:26px;margin:0;letter-spacing:.02em}
 .notice.warn{background:var(--warn-bg);color:var(--warn-ink)}
 .notice.bad{background:var(--danger-bg);color:var(--danger-ink)}
 .notice.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.notice{transition:opacity .3s}
+.notice.fade{opacity:0}
+.notice-x{appearance:none;-webkit-appearance:none;margin-left:auto;border:none;background:transparent;color:inherit;font:inherit;font-size:24px;line-height:1;min-width:44px;min-height:40px;cursor:pointer;border-radius:8px}
 .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:16px;overflow-x:auto}
 .tab{appearance:none;-webkit-appearance:none;border:none;background:transparent;font:inherit;font-size:18px;padding:10px 16px;cursor:pointer;color:var(--muted);border-bottom:4px solid transparent;margin-bottom:-2px;white-space:nowrap;min-height:50px}
 .tab[aria-selected="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--accent)}
-.badge{display:inline-block;min-width:1.6em;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--danger-ink);color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:1.6}
 .searchbox input{width:100%;font:inherit;font-size:21px;padding:12px 14px;border:2px solid #b9b5ab;border-radius:10px;background:#fff;color:var(--ink)}
 .searchbox input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
 .filters{margin:12px 0 4px;display:grid;gap:8px}
@@ -59,6 +61,7 @@ h1{font-size:26px;margin:0;letter-spacing:.02em}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{appearance:none;-webkit-appearance:none;font:inherit;font-size:16px;min-height:42px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.sorthint{font-size:15px;color:var(--muted)}
 .frow input[type=date]{font:inherit;font-size:17px;padding:6px 8px;border:1px solid #b9b5ab;border-radius:8px;min-height:42px;background:#fff;color:var(--ink)}
 .summary{margin:12px 0 10px;font-size:17px}
 .summary p{margin:4px 0}
@@ -78,20 +81,10 @@ h1{font-size:26px;margin:0;letter-spacing:.02em}
 .res-drugs li{padding:2px 10px;border-radius:6px;background:#f1efea;font-size:16px;border:1px solid transparent}
 .res-drugs li.hit{background:var(--hit);border-color:var(--hit-line);font-weight:700}
 .more{display:block;margin:6px auto 0}
-.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
-.ctable{border-collapse:collapse;width:100%;font-size:15px}
-.ctable th,.ctable td{padding:8px 10px;border-bottom:1px solid var(--soft);text-align:left;vertical-align:top}
-.ctable th{background:#f7f6f2;font-weight:700;white-space:nowrap}
-.ctable tr.bad td{background:#fff5f4}
-.ctable .muted{color:var(--muted);font-size:14px}
-.ctable .btn{white-space:nowrap}
-.ctable td.nw{white-space:nowrap}
 .tag{display:inline-block;font-size:13px;padding:1px 8px;border-radius:6px;margin:1px 2px 1px 0;line-height:1.6}
 .tag.bad{background:var(--danger-bg);color:var(--danger-ink)}
 .tag.warn{background:var(--warn-bg);color:var(--warn-ink)}
 .tag.ok{background:var(--ok-bg);color:var(--ok-ink)}
-.check{display:inline-flex;align-items:center;gap:8px;margin:4px 0 10px;font-size:17px;cursor:pointer}
-.check input{width:22px;height:22px}
 .ferr{margin:12px 0 0;padding:10px 14px;background:var(--danger-bg);color:var(--danger-ink);border-radius:10px;font-size:16px}
 .ferr ul{margin:4px 0 0;padding-left:1.3em}
 .help{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 18px}
@@ -129,6 +122,17 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 .set-sec .note{margin:4px 0 10px}
 .set-status{margin:0;font-size:16px}
 .warnsec h4{color:var(--danger-ink)}
+/* 設定の中の「読み取り結果の確認」 */
+.ck-count{margin:0 0 4px;font-size:17px;font-weight:700}
+.ck-count.ok{color:var(--ok-ink)}
+.ck-count.bad{color:var(--danger-ink)}
+.ck-list{display:grid;gap:8px;margin:10px 0 0}
+.ck-item{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-left:5px solid var(--danger-ink);border-radius:10px;padding:10px 12px;background:#fff}
+.ck-main{flex:1 1 auto;min-width:0}
+.ck-name{font-size:18px;font-weight:700;line-height:1.4}
+.ck-name .kana{font-size:15px;font-weight:400;color:var(--muted);margin-left:8px}
+.ck-sub{font-size:15px;color:var(--muted);word-break:break-all}
+.ck-item .btn{flex:0 0 auto}
 @media (max-width:700px){
   h1{font-size:23px}
   .res{grid-template-columns:minmax(0,1fr)}
@@ -169,7 +173,6 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
   <nav class="tabs" id="tabs" hidden>
     <button class="tab" type="button" data-tab="drug" aria-selected="true">薬で探す</button>
     <button class="tab" type="button" data-tab="patient" aria-selected="false">患者さんで探す</button>
-    <button class="tab" type="button" data-tab="check" aria-selected="false">読み取り結果の確認<span class="badge" id="issueBadge" hidden></span></button>
   </nav>
 
   <section class="tabpanel" id="tab-drug" hidden>
@@ -186,9 +189,10 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       </div>
       <div class="frow"><span class="flabel">並び順</span>
         <div class="chips" id="sortChips">
-          <button type="button" class="chip on" data-sort="asc">来局予想日の早い順</button>
-          <button type="button" class="chip" data-sort="desc">来局予想日の遅い順</button>
+          <button type="button" class="chip on" data-sort="asc">日付の古い順</button>
+          <button type="button" class="chip" data-sort="desc">日付の新しい順</button>
         </div>
+        <span class="sorthint" id="sortHint"></span>
       </div>
     </div>
     <div class="summary" id="drugSummary"></div>
@@ -201,24 +205,18 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
     <div class="results" id="patientResults"></div>
   </section>
 
-  <section class="tabpanel" id="tab-check" hidden>
-    <div class="summary" id="checkSummary"></div>
-    <label class="check"><input type="checkbox" id="onlyIssues"> 確認が必要なものだけ表示</label>
-    <div class="tablewrap"><table class="ctable" id="checkTable"></table></div>
-    <div id="fileErrors"></div>
-  </section>
-
   <details class="help">
     <summary>使い方のヒント</summary>
     <ul>
       <li><b>薬で探す</b>：薬品名の一部と規格の数字をスペースで区切って入れます（例：<b>アムロジピン 5</b>）。「錠」「mg」は入れても入れなくても同じ結果です。ひらがなとカタカナ、全角と半角の違いは区別しません。メーカー名（例：サワイ）でも絞り込めます。</li>
       <li>数字は「その数字そのもの」だけに当たります。「5」で探しても「2.5」や「500」は出てきません。</li>
       <li><b>来局予想日</b>：「日付を指定」を選んで日付を入れると、その日までに来局予定のカードだけを表示します。薬品名を空にすると、その日までのカードを一覧できます。</li>
-      <li><b>並び順</b>：「来局予想日の早い順」は、来局予想日が今日に近いカードから並べます。「来局予想日の遅い順」は、先の日付のカードから並べます。</li>
+      <li><b>並び順</b>：「日付の古い順」は、来局予想日がいちばん前のカードから並べます（過ぎた日付 → 今日 → 先の日付）。「日付の新しい順」は、いちばん先の日付のカードから並べます（先の日付 → 今日 → 過ぎた日付）。</li>
       <li>薬を2列に並べたカードや、スペースを2つ以上空けて並べた薬も、1剤ずつ別々に読み取ります。「読み取った文字（そのまま）」では、区切った位置を「｜」で表示します。</li>
       <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日（550327 や 55.3.27）・医療機関名で探せます。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
+      <li><b>読み取り結果の確認</b>：来局予想日・氏名・薬が読み取れなかったカード、写真だけのページ、同じ患者さんのカードが2枚あるときは、右上の「設定」の中の「読み取り結果の確認」に一覧で出ます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。</li>
       <li><b>データの更新</b>：PDFを入れ直したら、右上の「設定」（歯車のマーク）→「PDF・ZIPを読み込む」でもう一度読み込みます。前の内容とまるごと入れ替わり、この端末の記憶も新しくなります。画面の上に出る「◯/◯ 来局分まで更新済み」は、PDFのファイル名に入っている日付です（その日に来局した患者さんまで、カードを更新してあるという意味）。ファイル名に日付がないときは、「いちばん新しいPDF」の作成日時を表示します。</li>
     </ul>
   </details>
@@ -245,6 +243,13 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <h4>今のデータ</h4>
       <p id="setStatus" class="set-status"></p>
     </section>
+    <!-- 読み取れなかったカードの一覧（ふだんの画面には出さず、ここで確かめる） -->
+    <section class="set-sec" id="checkSec" hidden>
+      <h4>読み取り結果の確認</h4>
+      <div id="checkSummary"></div>
+      <div class="ck-list" id="checkList"></div>
+      <div id="fileErrors"></div>
+    </section>
     <section class="set-sec warnsec" id="clearSec">
       <h4>データを消す</h4>
       <p class="note">この端末に記憶している予製カードの内容と写真を消します。消したあとは、もう一度読み込むまで検索できません。</p>
@@ -263,7 +268,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.06-6';
+const APP_VERSION = 'v2026.11.06-8';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1492,36 +1497,69 @@ async function loadFiles(entries) {
   state.limits.drug = state.limits.patient = 200;
   renderAll();
   const nIssue = state.cards.filter(cardHasIssue).length, nErr = state.files.filter(f => f.error).length;
-  const memo = saveOk ? 'この端末に記憶したので、次からは開くだけで検索できます。' : 'この端末には記憶できませんでした（ページを閉じると消えます）。';
+  // 短い文にして、数秒で消えても読めるようにする
+  const done = '読み込みが終わりました（カード ' + state.cards.length + ' 枚）。';
+  const memo = saveOk ? '' : 'この端末には記憶できませんでした（ページを閉じると消えます）。';
   if (nIssue || nErr) {
-    showNotice('確認が必要なカードが ' + nIssue + ' 枚' + (nErr ? '、読めなかったPDFが ' + nErr + ' 件' : '') + 'あります。' + memo, 'warn', '「読み取り結果の確認」を開く', () => switchTab('check'));
+    showNotice(done + (nIssue ? '確認が必要なカードが ' + nIssue + ' 枚' : '') + (nIssue && nErr ? '、' : '') + (nErr ? '読めなかったPDFが ' + nErr + ' 件' : '') + 'あります。' + memo, 'warn', '設定で確認する', () => openSettings('check'));
   } else {
-    showNotice('読み込みが終わりました（カード ' + state.cards.length + ' 枚）。' + memo, saveOk ? 'ok' : 'warn');
+    showNotice(done + (saveOk ? 'この端末に記憶しました。' : memo), saveOk ? 'ok' : 'warn');
   }
 }
 
 /* =========================================================
    7. 画面
    ========================================================= */
+// お知らせは数秒で自動的に消す（いつまでも残らないように）。「×」や検索の入力でもすぐ消える
+const NOTICE_MS = { ok: 3000, warn: 6000, bad: 10000 };
+let noticeTimer = null;
+function hideNotice() {
+  clearTimeout(noticeTimer); noticeTimer = null;
+  const div = $('#notice').firstElementChild;
+  if (!div) return;
+  div.classList.add('fade');
+  setTimeout(() => { if (div.parentNode) div.remove(); }, 350);
+}
 function showNotice(text, kind, btnLabel, onClick) {
   const box = $('#notice');
+  clearTimeout(noticeTimer); noticeTimer = null;
   box.innerHTML = '';
   if (!text) return;
+  kind = kind || 'ok';
   const div = document.createElement('div');
-  div.className = 'notice ' + (kind || 'ok');
+  div.className = 'notice ' + kind;
+  div.setAttribute('role', 'status');
   const sp = document.createElement('span'); sp.textContent = text; div.appendChild(sp);
   if (btnLabel) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = btnLabel;
-    b.addEventListener('click', () => { box.innerHTML = ''; onClick(); });
+    b.addEventListener('click', () => { hideNotice(); onClick(); });
     div.appendChild(b);
   }
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'notice-x'; x.textContent = '×'; x.setAttribute('aria-label', 'お知らせを閉じる');
+  x.addEventListener('click', hideNotice);
+  div.appendChild(x);
   box.appendChild(div);
+  noticeTimer = setTimeout(hideNotice, NOTICE_MS[kind] || 5000);
+}
+
+// 設定の画面（読み込み・読み取り結果の確認・消去）。sec に 'check' を渡すと確認の欄を開いた状態で表示する
+function openSettings(sec) {
+  closeDlg();
+  const d = $('#setDlg');
+  if (!d.open) d.showModal();
+  const body = d.querySelector('.set-body');
+  if (sec === 'check' && !$('#checkSec').hidden) body.scrollTop += $('#checkSec').getBoundingClientRect().top - body.getBoundingClientRect().top;
+  else body.scrollTop = 0;
+}
+function closeSettings() {
+  const d = $('#setDlg');
+  if (d.open) d.close();
 }
 
 function switchTab(tab) {
   state.tab = tab;
   for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
-  for (const id of ['drug', 'patient', 'check']) $('#tab-' + id).hidden = id !== tab;
+  for (const id of ['drug', 'patient']) $('#tab-' + id).hidden = id !== tab;
   renderTab();
 }
 
@@ -1530,11 +1568,13 @@ function renderAll() {
   $('#empty').hidden = has;
   $('#tabs').hidden = !has;
   $('#clearSec').hidden = !has;
+  $('#checkSec').hidden = !has;
   if (!has) {
     $('#status').textContent = 'まだPDFを読み込んでいません';
     $('#setStatus').textContent = 'まだ読み込んでいません。';
-    for (const id of ['drug', 'patient', 'check']) $('#tab-' + id).hidden = true;
-    $('#notice').innerHTML = '';
+    for (const id of ['drug', 'patient']) $('#tab-' + id).hidden = true;
+    $('#checkSummary').innerHTML = $('#checkList').innerHTML = $('#fileErrors').innerHTML = '';
+    showNotice('');
     return;
   }
   const t = state.loadedAt;
@@ -1554,16 +1594,13 @@ function renderAll() {
   $('#setStatus').innerHTML = (upd ? upd.replace(/／$/, '') + '<br>' : '') + esc('カード ' + state.cards.length + ' 枚（PDF ' + state.files.length + ' 件）。' + fmtDT(t) + ' に読み込みました。' +
     (newest ? 'いちばん新しいPDFは ' + fmtDT(newest) + ' 作成です。' : '') + (state.saved === false ? 'この端末には記憶していません。' : 'この端末に記憶しています。')) +
     (names.length ? '<br>' + esc('ファイル名：' + names.join('、')) : '');
-  const nIssue = state.cards.filter(cardHasIssue).length + state.files.filter(f => f.error).length;
-  const bd = $('#issueBadge');
-  bd.hidden = !nIssue; bd.textContent = nIssue;
+  renderCheck();
   switchTab(state.tab);
 }
 
 function renderTab() {
-  if (state.tab === 'drug') renderDrug();
-  else if (state.tab === 'patient') renderPatient();
-  else renderCheck();
+  if (state.tab === 'patient') renderPatient();
+  else renderDrug();
 }
 
 function passDate(v) {
@@ -1669,39 +1706,38 @@ function renderPatient() {
   renderList(rows, listEl, 'patient', true);
 }
 
+// カードの確認事項の印（赤：確認が必要／黄：書いていない項目）
+function cardTags(c, withWarns) {
+  return c.issues.map(t => '<span class="tag bad">' + esc(t) + '</span>').join('') +
+    (c.dup > 1 ? '<span class="tag bad">同じ患者さん・医療機関のカードが ' + c.dup + ' 枚</span>' : '') +
+    (withWarns ? c.warns.map(t => '<span class="tag warn">' + esc(t) + '</span>').join('') : '');
+}
+
+// 設定の中の「読み取り結果の確認」：確認が必要なカードだけを、ファイル・ページの順に並べる
 function renderCheck() {
-  const only = $('#onlyIssues').checked;
   const today = todayMidnight();
-  const all = state.cards.slice().sort((a, b) => a.fileRec.key.localeCompare(b.fileRec.key, 'ja', { numeric: true }) || a.page - b.page);
-  const nIssue = all.filter(cardHasIssue).length;
+  const bad = state.cards.filter(cardHasIssue).sort((a, b) => a.fileRec.key.localeCompare(b.fileRec.key, 'ja', { numeric: true }) || a.page - b.page);
   const errs = state.files.filter(f => f.error);
   const blank = state.files.reduce((n, f) => n + (f.blank || 0), 0);
   const skipped = state.files.reduce((n, f) => n + (f.skipped || 0), 0);
-  $('#checkSummary').innerHTML = '<p>読み込んだPDF <b>' + state.files.length + '</b> 件／カード <b>' + all.length + '</b> 枚／確認が必要 <b>' + nIssue + '</b> 枚' + (errs.length ? '／読めなかったPDF <b>' + errs.length + '</b> 件' : '') + '</p>' +
-    '<p class="variants">1ページを1枚のカードとして読み取っています。赤い行は内容を確かめてください。' +
-    (skipped ? 'ノートの最初と最後にある、カードではないページ（表紙・ブックマーク用のページ：' + skipped + ' ページ）は数えていません。' : '') +
-    (blank ? '文字も写真もない白紙のページ（' + blank + ' ページ）は数えていません。' : '') + '</p>';
-  const rows = all.filter(c => !only || cardHasIssue(c));
-  let html = '<thead><tr><th>No.</th><th>ファイル</th><th>来局予想日</th><th>氏名</th><th>生年月日</th><th>医療機関</th><th>薬</th><th>写真</th><th>確認事項</th><th></th></tr></thead><tbody>';
-  rows.forEach((c) => {
+  let head;
+  if (bad.length || errs.length) {
+    head = '<p class="ck-count bad">' + (bad.length ? '確認が必要なカード：' + bad.length + ' 枚' : '') + (bad.length && errs.length ? '／' : '') + (errs.length ? '読めなかったPDF：' + errs.length + ' 件' : '') + '</p>' +
+      '<p class="note">「見る」で、カードの写真と読み取った文字を確かめられます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。</p>';
+  } else {
+    head = '<p class="ck-count ok">確認が必要なカードはありません。</p>';
+  }
+  const notes = (skipped ? 'ノートの最初と最後にある、カードではないページ（表紙・ブックマーク用のページ：' + skipped + ' ページ）は数えていません。' : '') +
+    (blank ? '文字も写真もない白紙のページ（' + blank + ' ページ）は数えていません。' : '');
+  $('#checkSummary').innerHTML = head + (notes ? '<p class="note">' + notes + '</p>' : '');
+  $('#checkList').innerHTML = bad.map(c => {
     const v = inferVisit(c, today);
-    const tags = c.issues.map(t => '<span class="tag bad">' + esc(t) + '</span>').join('') +
-      (c.dup > 1 ? '<span class="tag bad">同じ患者さん・医療機関のカードが ' + c.dup + ' 枚</span>' : '') +
-      c.warns.map(t => '<span class="tag warn">' + esc(t) + '</span>').join('');
-    html += '<tr class="' + (cardHasIssue(c) ? 'bad' : '') + '" data-card="' + c.id + '">' +
-      '<td>' + (all.indexOf(c) + 1) + '</td>' +
-      '<td>' + esc(c.fileRec.key) + '<br><span class="muted">' + c.page + 'ページ目</span></td>' +
-      '<td>' + (v ? esc(fmtYMD(v.date)) : '—') + '</td>' +
-      '<td>' + esc(c.name || '—') + (c.kana ? '<br><span class="muted">' + esc(c.kana) + '</span>' : '') + '</td>' +
-      '<td>' + (c.birth ? esc(fmtBirth(c.birth)) : '—') + '</td>' +
-      '<td>' + esc(c.hospital || '—') + '</td>' +
-      '<td class="nw">' + c.drugs.length + '件</td>' +
-      '<td class="nw">' + (c.photo ? 'あり' : c.hasImage ? '表示不可' : 'なし') + '</td>' +
-      '<td>' + (tags || '<span class="tag ok">OK</span>') + '</td>' +
-      '<td><button type="button" class="btn small" data-open="' + c.id + '">見る</button></td></tr>';
-  });
-  if (!rows.length) html += '<tr><td colspan="10">' + (only ? '確認が必要なカードはありません。' : 'カードがありません。') + '</td></tr>';
-  $('#checkTable').innerHTML = html + '</tbody>';
+    return '<div class="ck-item" data-card="' + c.id + '"><div class="ck-main">' +
+      '<div class="ck-name">' + esc(c.name || '（氏名不明）') + (c.kana ? '<span class="kana">' + esc(c.kana) + '</span>' : '') + '</div>' +
+      '<div class="ck-sub">' + esc(c.fileRec.key) + '・' + c.page + 'ページ目' + (v ? '／来局予想日 ' + esc(fmtYMD(v.date)) : '') + '</div>' +
+      '<div>' + cardTags(c, false) + '</div></div>' +
+      '<button type="button" class="btn small" data-open="' + c.id + '">見る</button></div>';
+  }).join('');
   $('#fileErrors').innerHTML = errs.length ? '<div class="ferr"><b>読めなかったPDF</b><ul>' + errs.map(f => '<li>' + esc(f.key) + '：' + esc(f.error) + '</li>').join('') + '</ul></div>' : '';
 }
 
@@ -1719,9 +1755,7 @@ function openCard(id) {
   if (!c) return;
   const v = inferVisit(c, todayMidnight());
   $('#dlgTitle').textContent = c.name || '（氏名不明）';
-  const tags = c.issues.map(t => '<span class="tag bad">' + esc(t) + '</span>').join('') +
-    (c.dup > 1 ? '<span class="tag bad">同じ患者さん・医療機関のカードが ' + c.dup + ' 枚</span>' : '') +
-    c.warns.map(t => '<span class="tag warn">' + esc(t) + '</span>').join('');
+  const tags = cardTags(c, true);
   $('#dlgInfo').innerHTML =
     '<dl class="kv">' +
     '<dt>来局予想日</dt><dd>' + (v ? esc(fmtYMD(v.date)) + '　' + esc(relLabel(v.diff)) : '読み取れませんでした') + '</dd>' +
@@ -1793,12 +1827,10 @@ function init() {
   if (isIOS || !('webkitdirectory' in document.createElement('input'))) $('#btnFolder').hidden = true;
   if (isIOS) $('#dropNote').hidden = true;
 
-  // 設定（読み込み・消去はここにまとめ、ふだんの画面には出さない）
+  // 設定（読み込み・読み取り結果の確認・消去はここにまとめ、ふだんの画面には出さない）
   const setDlg = $('#setDlg');
-  const openSettings = () => { closeDlg(); if (!setDlg.open) setDlg.showModal(); };
-  const closeSettings = () => { if (setDlg.open) setDlg.close(); };
-  $('#btnSettings').addEventListener('click', openSettings);
-  $('#btnOpenSettings').addEventListener('click', openSettings);
+  $('#btnSettings').addEventListener('click', () => { hideNotice(); openSettings(); });
+  $('#btnOpenSettings').addEventListener('click', () => openSettings());
   $('#setClose').addEventListener('click', closeSettings);
   setDlg.addEventListener('click', e => { if (e.target === setDlg) closeSettings(); });
 
@@ -1818,6 +1850,9 @@ function init() {
   for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => switchTab(b.dataset.tab));
   $('#qDrug').addEventListener('input', debounce(() => { state.limits.drug = 200; renderDrug(); }, 150));
   $('#qPatient').addEventListener('input', debounce(() => { state.limits.patient = 200; renderPatient(); }, 150));
+  // 検索を始めたら、お知らせはすぐ消す
+  $('#qDrug').addEventListener('input', hideNotice);
+  $('#qPatient').addEventListener('input', hideNotice);
   $('#dateChips').addEventListener('click', e => {
     const b = e.target.closest('.chip'); if (!b) return;
     state.mode = b.dataset.mode;
@@ -1825,14 +1860,17 @@ function init() {
     $('#rangeRow').hidden = state.mode !== 'range';
     renderDrug();
   });
+  // 並び順の横に、いまの並び方を短く表示する
+  const showSortHint = () => { $('#sortHint').textContent = state.sort === 'asc' ? '過ぎた日付 → 今日 → 先の日付' : '先の日付 → 今日 → 過ぎた日付'; };
+  showSortHint();
   $('#sortChips').addEventListener('click', e => {
     const b = e.target.closest('.chip'); if (!b) return;
     state.sort = b.dataset.sort;
     for (const x of document.querySelectorAll('#sortChips .chip')) x.classList.toggle('on', x === b);
+    showSortHint();
     renderTab();
   });
   $('#dTo').addEventListener('change', renderDrug);
-  $('#onlyIssues').addEventListener('change', renderCheck);
 
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-open]');
