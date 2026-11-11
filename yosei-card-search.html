@@ -17,6 +17,7 @@
   --warn-ink:#8a4600; --warn-bg:#fdead2;
   --danger-ink:#a3191f; --danger-bg:#fde2e0;
   --ok-ink:#1e6a33; --ok-bg:#e1f1e5;
+  --s0:#c9c6bd; --s1:#3d7fb5; --s2:#e08a1e; --s3:#2e8b4a; --clover:#eef6e6;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}
@@ -126,6 +127,60 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 .set-sec .note{margin:4px 0 10px}
 .set-status{margin:0;font-size:16px}
 .warnsec h4{color:var(--danger-ink)}
+/* カレンダー（予製の進み具合） */
+.cal-nav{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px}
+.cal-month{font-size:22px;font-weight:700;min-width:7.5em;text-align:center}
+.cal-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:15px;color:var(--muted);margin:0 0 10px;align-items:center}
+.lg{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
+.st0{background:var(--s0)}.st1{background:var(--s1)}.st2{background:var(--s2)}.st3{background:var(--s3)}
+.sw.cl{background:var(--clover)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-wd{text-align:center;font-size:15px;color:var(--muted);padding:2px 0}
+.cal-wd.sun{color:#b3261e}.cal-wd.sat{color:var(--accent)}
+.cal-cell{appearance:none;-webkit-appearance:none;font:inherit;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:3px 4px 5px;min-height:78px;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;gap:2px;min-width:0}
+.cal-cell.out{background:transparent}
+.cal-cell.out .cal-d{color:var(--muted);font-weight:400}
+.cal-cell.sel{outline:3px solid var(--accent);outline-offset:-1px}
+.cal-d{font-size:16px;font-weight:700;align-self:flex-start;line-height:1.5;padding:0 6px;border-radius:999px}
+.cal-cell.today .cal-d{background:var(--accent);color:#fff}
+.cal-ok{margin-left:auto;color:var(--ok-ink);font-weight:700;font-size:15px}
+.cal-top{display:flex;align-items:center;width:100%}
+.cal-halves{display:grid;grid-template-columns:1fr 1fr;gap:3px;flex:1;width:100%}
+.cal-half{min-width:0;font-size:14px;line-height:1.3;border-radius:5px;padding:2px 3px}
+.cal-half.l{background:var(--clover)}
+.cal-n{white-space:nowrap}
+.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--soft);margin-top:2px}
+.bar i{display:block;height:100%}
+.day-title{font-size:21px;margin:18px 0 8px}
+.day-title .rel{font-size:16px;font-weight:400;color:var(--muted);margin-left:10px}
+.day-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.day-col{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.day-col.l{background:var(--clover)}
+.day-col h4{margin:0 0 8px;font-size:18px}
+.day-col h4 span{font-weight:400;font-size:16px;color:var(--muted);margin-left:8px}
+.yrow{background:#fff;border:1px solid var(--line);border-left:6px solid var(--s0);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.yrow.s1{border-left-color:var(--s1)}.yrow.s2{border-left-color:var(--s2)}.yrow.s3{border-left-color:var(--s3)}
+.yrow-top{display:flex;gap:8px;align-items:flex-start}
+.yrow-main{flex:1 1 auto;min-width:0}
+.yrow-name{font-weight:700;font-size:18px;line-height:1.4}
+.yrow-name .kana{font-size:15px;font-weight:400;color:var(--muted);margin-left:8px}
+.yrow-sub{font-size:15px;color:var(--muted)}
+.stg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px}
+.stg button{appearance:none;-webkit-appearance:none;font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;padding:2px;color:var(--ink);white-space:nowrap}
+.stg button[aria-pressed="true"]{color:#fff;font-weight:700;border-color:transparent}
+.stg .b0[aria-pressed="true"]{background:#6f6c64}
+.stg .b1[aria-pressed="true"]{background:#2f6fa3}
+.stg .b2[aria-pressed="true"]{background:#b06400}
+.stg .b3[aria-pressed="true"]{background:#24783d}
+@media (max-width:700px){.day-cols{grid-template-columns:1fr}.cal-halves{grid-template-columns:1fr}.cal-half{font-size:12px}.cal-cell{min-height:70px}}
+/* 設定の中の「🍀の医療機関」 */
+.set-label{display:block;font-size:16px;margin:8px 0 4px}
+.set-input{width:100%;font:inherit;font-size:18px;padding:8px 10px;border:2px solid #b9b5ab;border-radius:8px;background:#fff;color:var(--ink)}
+.hchips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+#cloverPick{margin-top:10px}
+#cloverPick summary{cursor:pointer;font-size:17px;padding:8px 0}
+.vchip.byword{opacity:.75;cursor:default}
 /* 設定の中の「読み取り結果の確認」 */
 .ck-count{margin:0 0 4px;font-size:17px;font-weight:700}
 .ck-count.ok{color:var(--ok-ink)}
@@ -177,6 +232,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
   <nav class="tabs" id="tabs" hidden>
     <button class="tab" type="button" data-tab="drug" aria-selected="true">薬で探す</button>
     <button class="tab" type="button" data-tab="patient" aria-selected="false">患者さんで探す</button>
+    <button class="tab" type="button" data-tab="cal" aria-selected="false">カレンダー</button>
   </nav>
 
   <section class="tabpanel" id="tab-drug" hidden>
@@ -209,6 +265,27 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
     <div class="results" id="patientResults"></div>
   </section>
 
+  <!-- 来局予想日ごとに、予製がどこまで進んでいるかを確かめる -->
+  <section class="tabpanel" id="tab-cal" hidden>
+    <div class="cal-nav">
+      <button class="btn small" type="button" id="calPrev">‹ 前の月</button>
+      <span class="cal-month" id="calMonth"></span>
+      <button class="btn small" type="button" id="calNext">次の月 ›</button>
+      <button class="btn small" type="button" id="calToday">今日</button>
+    </div>
+    <div class="cal-legend">
+      <span class="lg"><i class="sw cl"></i>枠の左＝🍀（精神科）／右＝それ以外</span>
+      <span class="lg">数字＝完成した数／全体の数</span>
+      <span class="lg"><i class="sw st0"></i>未作成</span>
+      <span class="lg"><i class="sw st1"></i>作成済（鑑査待ち）</span>
+      <span class="lg"><i class="sw st2"></i>鑑査済・不足あり（補充待ち）</span>
+      <span class="lg"><i class="sw st3"></i>完成</span>
+    </div>
+    <div id="calHint"></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div id="calDay"></div>
+  </section>
+
   <details class="help">
     <summary>使い方のヒント</summary>
     <ul>
@@ -220,6 +297,8 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日（550327 や 55.3.27）・医療機関名で探せます。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
+      <li><b>カレンダー</b>：来局予想日ごとに、予製がどこまで進んでいるかを確かめます。日付を押すと、その日の患者さんが左（🍀＝精神科）と右（それ以外）に分かれて並びます。患者さんごとに「未作成／作成済／不足あり／完成」のどれかを押して印を付けます（作成済＝鑑査待ち、不足あり＝鑑査は済んだが不足分の補充待ち）。付けた印は、この端末の中にだけ記憶します。患者さんが来局してカードの来局予想日が新しくなると、印は「未作成」に戻ります。🍀にする医療機関は、右上の「設定」で選びます。カレンダーのタブは、最初は出ていません。使う端末で、「設定」→「カレンダー」の「表示する」を選ぶと出ます。</li>
+      <li><b>アプリの更新</b>：新しいファイルをGitHubに上げたあと、右上の「設定」→「最新の版に更新する」を押すと、新しい版に切り替わります。読み込んだ内容はそのまま残るので、ホーム画面のアイコンを作り直す必要はありません。</li>
       <li><b>読み取り結果の確認</b>：来局予想日・氏名・薬が読み取れなかったカード、写真だけのページ、同じ患者さんのカードが2枚あるときは、右上の「設定」の中の「読み取り結果の確認」に一覧で出ます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。</li>
       <li><b>データの更新</b>：PDFを入れ直したら、右上の「設定」（歯車のマーク）→「PDF・ZIPを読み込む」でもう一度読み込みます。前の内容とまるごと入れ替わり、この端末の記憶も新しくなります。画面の上に出る「◯/◯ 来局分まで更新済み」は、PDFのファイル名に入っている日付です（その日に来局した患者さんまで、カードを更新してあるという意味）。ファイル名に日付がないときは、「いちばん新しいPDF」の作成日時を表示します。</li>
     </ul>
@@ -254,9 +333,37 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <div class="ck-list" id="checkList"></div>
       <div id="fileErrors"></div>
     </section>
+    <!-- カレンダーのタブを出すかどうか -->
+    <section class="set-sec" id="calSec">
+      <h4>カレンダー</h4>
+      <p class="note">予製の進み具合を確かめる「カレンダー」のタブを、ふだんの画面に出すかどうかを選びます。最初は「表示しない」です。この端末で選んだ設定は、アプリを更新しても変わりません。「表示しない」にしても、付けた印は消えません。</p>
+      <div class="chips" id="calChips">
+        <button type="button" class="chip" data-cal="1">表示する</button>
+        <button type="button" class="chip" data-cal="0">表示しない</button>
+      </div>
+    </section>
+    <!-- カレンダーで左側（🍀）に分ける医療機関 -->
+    <section class="set-sec" id="cloverSec">
+      <h4>🍀（精神科）の医療機関</h4>
+      <p class="note">カレンダーでは、ここで選んだ医療機関のカードを枠の左側（🍀）に、それ以外を右側に分けて表示します。</p>
+      <label class="set-label" for="cloverWords">名前の一部で指定（「、」で区切ります。例：精神、心療、メンタル）</label>
+      <input type="text" id="cloverWords" class="set-input" autocomplete="off">
+      <details id="cloverPick" hidden>
+        <summary>読み込んだカードの医療機関名から選ぶ（<span id="cloverCount"></span>）</summary>
+        <p class="note">押すと🍀が付きます。もう一度押すと外れます。うすい色のものは、上の「名前の一部」に当てはまっているものです。</p>
+        <div class="hchips" id="cloverList"></div>
+      </details>
+    </section>
+    <!-- GitHubに上げた新しいファイルに切り替える（ホーム画面のアイコンを作り直さなくてよい） -->
+    <section class="set-sec" id="updSec">
+      <h4>アプリの更新</h4>
+      <p class="set-status">今の版：<b id="setVer"></b></p>
+      <p class="note">新しいファイルをGitHubに上げたあとでこのボタンを押すと、新しい版に切り替わります。読み込んだ内容・カレンダーの印・設定は、そのまま残ります。</p>
+      <button class="btn" id="btnUpdate" type="button">最新の版に更新する</button>
+    </section>
     <section class="set-sec warnsec" id="clearSec">
       <h4>データを消す</h4>
-      <p class="note">この端末に記憶している予製カードの内容と写真を消します。消したあとは、もう一度読み込むまで検索できません。</p>
+      <p class="note">この端末に記憶している予製カードの内容と写真、カレンダーに付けた印を消します。消したあとは、もう一度読み込むまで検索できません（🍀の医療機関の設定は残ります）。</p>
       <button class="btn danger" id="btnClear" type="button">読み込んだ内容を消す</button>
     </section>
   </div>
@@ -272,7 +379,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.11-1';
+const APP_VERSION = 'v2026.11.11-4';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1264,7 +1371,25 @@ const state = {
   pick: null, varAll: false,   // 薬の候補（カードでの書き方）から選んだもの／候補を全部出すか
   photoUrl: null, dlgSeq: 0,
   gen: '', restored: false, saved: null, loading: false,
+  status: new Map(),                 // カレンダーの印：カードのキー → { s: 1〜3, t: 付けた時刻 }
+  clover: { text: '', picks: [] },   // 🍀（精神科）にする医療機関：名前の一部（入力した文字）と、一覧から選んだもの
+  cal: { y: 0, m: 0, sel: '' },      // カレンダーで表示している年・月と、選んでいる日
+  showCal: false,                    // カレンダーのタブを出すか。最初は出さない。端末ごとに設定で選び、選んだ内容は版を更新しても変えない
 };
+
+/* カレンダーの印（進み具合）。0:未作成 1:作成済（鑑査待ち） 2:鑑査済・不足あり（補充待ち） 3:完成 */
+const STAGES = ['未作成', '作成済', '不足あり', '完成'];
+// 患者さん（氏名＋生年月日＋医療機関）と来局予想日で見分ける。PDFを読み込み直しても印は残り、
+// 来局してカードの来局予想日が変わると、新しい日付の分は「未作成」から始まる
+function statusKey(c) {
+  return (c.nameKey ? c.nameKey + '|' + c.birthDigits + '|' + c.hospKey : '?|' + c.fileRec.key + '|' + c.page) + '|' + c.month + '/' + c.day;
+}
+function stageOf(c) { const e = state.status.get(statusKey(c)); return e ? e.s : 0; }
+function cloverWords() { return state.clover.text.split(/[、,，\s]+/).map(normKey).filter(Boolean); }
+function isClover(c, words) {
+  if (!c.hospKey) return false;
+  return state.clover.picks.includes(c.hospKey) || (words || cloverWords()).some(w => c.hospKey.includes(w));
+}
 
 // 検索に使う「そろえた文字」などを付け足す（読み込み直後・記憶から戻したときの共通処理）
 function finishCard(c, drugTexts) {
@@ -1333,9 +1458,48 @@ async function saveMeta(meta) {
 async function clearSaved() {
   const db = await idb();
   const tx = db.transaction(['meta', 'photos'], 'readwrite');
-  tx.objectStore('meta').clear();
+  // 🍀の医療機関の設定（'config'）は個人の情報を含まないので残す
+  tx.objectStore('meta').delete('current');
+  tx.objectStore('meta').delete('status');
   tx.objectStore('photos').clear();
   await txDone(tx);
+}
+// カレンダーの印と設定を、この端末に記憶する
+async function saveExtra(key, val) {
+  const db = await idb();
+  const tx = db.transaction('meta', 'readwrite');
+  tx.objectStore('meta').put(val, key);
+  await txDone(tx);
+}
+let extraWarned = false;
+function persistStatus() {
+  saveExtra('status', Array.from(state.status)).catch(() => {
+    if (!extraWarned) { extraWarned = true; showNotice('カレンダーの印を、この端末に記憶できませんでした（ページを閉じると消えます）。', 'warn'); }
+  });
+}
+function persistConfig() { saveExtra('config', { clover: state.clover, showCal: state.showCal }).catch(() => {}); }
+async function loadExtras() {
+  try {
+    const db = await idb();
+    const st = db.transaction('meta', 'readonly').objectStore('meta');
+    const [status, config] = await Promise.all([reqDone(st.get('status')), reqDone(st.get('config'))]);
+    if (Array.isArray(status)) for (const [k, e] of status) if (e && e.s >= 1 && e.s <= 3 && !state.status.has(k)) state.status.set(k, e);
+    if (config && typeof config.showCal === 'boolean') state.showCal = config.showCal;   // この端末で選んだ設定をそのまま使う
+    if (config && config.clover) state.clover = { text: String(config.clover.text || ''), picks: Array.isArray(config.clover.picks) ? config.clover.picks.map(String) : [] };
+  } catch (e) { /* 記憶が使えない端末では、開いている間だけ使える */ }
+}
+function setStage(c, s) {
+  const k = statusKey(c);
+  if (s) state.status.set(k, { s, t: Date.now() }); else state.status.delete(k);
+  persistStatus();
+}
+// 今のカードに当てはまらなくなった古い印を片づける（来局して日付が変わった分など。念のため14日は残す）
+function pruneStatus() {
+  const live = new Set(state.cards.filter(c => c.month).map(statusKey));
+  const limit = Date.now() - 14 * 86400000;
+  let changed = false;
+  for (const [k, e] of state.status) if (!live.has(k) && e.t < limit) { state.status.delete(k); changed = true; }
+  if (changed) persistStatus();
 }
 async function savedPhoto(key) {
   const db = await idb();
@@ -1497,6 +1661,7 @@ async function loadFiles(entries) {
   }
   state.saved = saveOk;
   state.loading = false;
+  pruneStatus();
   if (saveOk && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   $('#progress').hidden = true;
   state.limits.drug = state.limits.patient = 200;
@@ -1553,7 +1718,8 @@ function openSettings(sec) {
   const d = $('#setDlg');
   if (!d.open) d.showModal();
   const body = d.querySelector('.set-body');
-  if (sec === 'check' && !$('#checkSec').hidden) body.scrollTop += $('#checkSec').getBoundingClientRect().top - body.getBoundingClientRect().top;
+  const target = sec ? $('#' + sec + 'Sec') : null;
+  if (target && !target.hidden) body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top;
   else body.scrollTop = 0;
 }
 function closeSettings() {
@@ -1561,10 +1727,18 @@ function closeSettings() {
   if (d.open) d.close();
 }
 
+// 設定の「カレンダー」に合わせて、タブと🍀の欄を出し入れする
+function applyCal() {
+  $('.tab[data-tab=cal]').hidden = !state.showCal;
+  $('#cloverSec').hidden = !state.showCal;
+  for (const b of document.querySelectorAll('#calChips .chip')) b.classList.toggle('on', (b.dataset.cal === '1') === state.showCal);
+  if (!state.showCal && state.tab === 'cal') state.tab = 'drug';
+}
+
 function switchTab(tab) {
   state.tab = tab;
   for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
-  for (const id of ['drug', 'patient']) $('#tab-' + id).hidden = id !== tab;
+  for (const id of ['drug', 'patient', 'cal']) $('#tab-' + id).hidden = id !== tab;
   renderTab();
 }
 
@@ -1577,7 +1751,8 @@ function renderAll() {
   if (!has) {
     $('#status').textContent = 'まだPDFを読み込んでいません';
     $('#setStatus').textContent = 'まだ読み込んでいません。';
-    for (const id of ['drug', 'patient']) $('#tab-' + id).hidden = true;
+    for (const id of ['drug', 'patient', 'cal']) $('#tab-' + id).hidden = true;
+    renderClover(); applyCal();
     $('#checkSummary').innerHTML = $('#checkList').innerHTML = $('#fileErrors').innerHTML = '';
     showNotice('');
     return;
@@ -1600,12 +1775,102 @@ function renderAll() {
     (newest ? 'いちばん新しいPDFは ' + fmtDT(newest) + ' 作成です。' : '') + (state.saved === false ? 'この端末には記憶していません。' : 'この端末に記憶しています。')) +
     (names.length ? '<br>' + esc('ファイル名：' + names.join('、')) : '');
   renderCheck();
+  renderClover(); applyCal();
   switchTab(state.tab);
 }
 
 function renderTab() {
   if (state.tab === 'patient') renderPatient();
+  else if (state.tab === 'cal') renderCal();
   else renderDrug();
+}
+
+/* ---------- カレンダー ---------- */
+const isoOf = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+// 来局予想日ごとに、🍀（左）とそれ以外（右）に分ける
+function calData(today) {
+  const words = cloverWords(), m = new Map();
+  for (const c of state.cards) {
+    const v = inferVisit(c, today);
+    if (!v) continue;
+    const k = isoOf(v.date);
+    let e = m.get(k);
+    if (!e) m.set(k, e = { L: [], R: [] });
+    (isClover(c, words) ? e.L : e.R).push(c);
+  }
+  return m;
+}
+const stageCount = list => { const n = [0, 0, 0, 0]; for (const c of list) n[stageOf(c)]++; return n; };
+function halfHtml(list, cls) {
+  if (!list.length) return '<span class="cal-half ' + cls + '"></span>';
+  const n = stageCount(list);
+  return '<span class="cal-half ' + cls + '"><span class="cal-n">' + n[3] + '/' + list.length + '</span><span class="bar">' +
+    [3, 2, 1, 0].map(s => (n[s] ? '<i class="st' + s + '" style="flex:' + n[s] + '"></i>' : '')).join('') + '</span></span>';
+}
+function dayColHtml(list, cls, title) {
+  const n = stageCount(list);
+  list = list.slice().sort((a, b) => (a.kanaKey || a.nameKey).localeCompare(b.kanaKey || b.nameKey, 'ja'));
+  return '<div class="day-col ' + cls + '"><h4>' + title + '<span>' + (list.length ? '完成 ' + n[3] + '／' + list.length + ' 件' : 'なし') + '</span></h4>' +
+    list.map(c => {
+      const s = stageOf(c);
+      return '<div class="yrow s' + s + '" data-card="' + c.id + '"><div class="yrow-top"><div class="yrow-main">' +
+        '<div class="yrow-name">' + esc(c.name || '（氏名不明）') + (c.kana ? '<span class="kana">' + esc(c.kana) + '</span>' : '') + '</div>' +
+        '<div class="yrow-sub">' + esc(c.hospital || '医療機関の記載なし') + '</div></div>' +
+        '<button type="button" class="btn small" data-open="' + c.id + '">カード</button></div>' +
+        '<div class="stg" role="group" aria-label="進み具合">' + STAGES.map((t, i) => '<button type="button" class="b' + i + '" data-stage="' + i + '" aria-pressed="' + (i === s) + '">' + t + '</button>').join('') + '</div></div>';
+    }).join('') + '</div>';
+}
+function renderCal() {
+  const today = todayMidnight(), cal = state.cal;
+  if (!cal.y) { cal.y = today.getFullYear(); cal.m = today.getMonth(); }
+  if (!cal.sel) cal.sel = isoOf(today);
+  const data = calData(today), todayIso = isoOf(today);
+  $('#calMonth').textContent = cal.y + '年' + (cal.m + 1) + '月';
+  $('#calHint').innerHTML = (!state.clover.picks.length && !cloverWords().length)
+    ? '<div class="notice warn"><span>🍀（精神科）にする医療機関が、まだ選ばれていません。選ぶと、枠の左側に分かれます。</span><button type="button" class="btn small" id="calClover">設定で選ぶ</button></div>' : '';
+  const first = new Date(cal.y, cal.m, 1), start = new Date(cal.y, cal.m, 1 - first.getDay());
+  const last = new Date(cal.y, cal.m + 1, 0), weeks = Math.ceil((first.getDay() + last.getDate()) / 7);
+  let html = Array.from(WD).map((w, i) => '<div class="cal-wd' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + w + '</div>').join('');
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), iso = isoOf(d);
+    const e = data.get(iso) || { L: [], R: [] }, all = e.L.length + e.R.length;
+    const nL = stageCount(e.L), nR = stageCount(e.R), done = all > 0 && nL[3] + nR[3] === all;
+    html += '<button type="button" class="cal-cell' + (d.getMonth() !== cal.m ? ' out' : '') + (iso === todayIso ? ' today' : '') + (iso === cal.sel ? ' sel' : '') + '" data-iso="' + iso + '" aria-pressed="' + (iso === cal.sel) + '"' +
+      ' aria-label="' + (d.getMonth() + 1) + '月' + d.getDate() + '日' + (all ? '、🍀 完成' + nL[3] + '／' + e.L.length + '、それ以外 完成' + nR[3] + '／' + e.R.length : '、予製なし') + '">' +
+      '<span class="cal-top"><span class="cal-d">' + d.getDate() + '</span>' + (done ? '<span class="cal-ok">✓</span>' : '') + '</span>' +
+      (all ? '<span class="cal-halves">' + halfHtml(e.L, 'l') + halfHtml(e.R, 'r') + '</span>' : '') + '</button>';
+  }
+  $('#calGrid').innerHTML = html;
+  // 選んでいる日の一覧（左＝🍀、右＝それ以外）
+  const sd = parseISODate(cal.sel), se = data.get(cal.sel) || { L: [], R: [] };
+  const diff = Math.round((sd - today) / 86400000);
+  $('#calDay').innerHTML = '<h3 class="day-title">' + fmtMD(sd) + '（' + WD[sd.getDay()] + '）の予製<span class="rel">' + esc(relLabel(diff)) + '</span></h3>' +
+    (se.L.length + se.R.length
+      ? '<div class="day-cols">' + dayColHtml(se.L, 'l', '🍀 精神科') + dayColHtml(se.R, 'r', 'それ以外') + '</div>'
+      : '<p class="hint">この日が来局予想日のカードはありません。</p>');
+}
+
+/* ---------- 設定：🍀（精神科）の医療機関 ---------- */
+function renderClover() {
+  const inp = $('#cloverWords');
+  if (document.activeElement !== inp) inp.value = state.clover.text;
+  const words = cloverWords(), hosp = new Map();
+  for (const c of state.cards) {
+    if (!c.hospKey) continue;
+    let h = hosp.get(c.hospKey);
+    if (!h) hosp.set(c.hospKey, h = { key: c.hospKey, name: c.hospital, n: 0 });
+    h.n++;
+  }
+  const list = Array.from(hosp.values()).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  $('#cloverPick').hidden = !list.length;
+  let on = 0;
+  $('#cloverList').innerHTML = list.map(h => {
+    const picked = state.clover.picks.includes(h.key), byWord = !picked && words.some(w => h.key.includes(w));
+    if (picked || byWord) on++;
+    return '<button type="button" class="vchip' + (byWord ? ' byword' : '') + '" data-hosp="' + esc(h.key) + '" aria-pressed="' + (picked || byWord) + '"' + (byWord ? ' aria-disabled="true"' : '') + '>' +
+      (picked || byWord ? '🍀 ' : '') + esc(h.name) + '<b>' + h.n + '</b>枚</button>';
+  }).join('');
+  $('#cloverCount').textContent = list.length + ' か所のうち 🍀 ' + on + ' か所';
 }
 
 function passDate(v) {
@@ -1862,8 +2127,9 @@ function init() {
   $('#inFiles').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: '' })); e.target.value = ''; if (fs.length) { closeSettings(); loadFiles(fs); } });
   $('#inFolder').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: f.webkitRelativePath || '' })); e.target.value = ''; if (fs.length) { closeSettings(); loadFiles(fs); } });
   $('#btnClear').addEventListener('click', async () => {
-    if (!window.confirm('読み込んだ内容を、この端末の記憶からも消します。よろしいですか？\n（もう一度使うときは、PDF・ZIPを読み込み直します）')) return;
+    if (!window.confirm('読み込んだ内容と、カレンダーに付けた印を、この端末の記憶からも消します。よろしいですか？\n（もう一度使うときは、PDF・ZIPを読み込み直します）')) return;
     state.files = []; state.cards = []; state.gen = ''; state.restored = false; state.saved = null;
+    state.status.clear();
     closeDlg(); closeSettings();
     try { await clearSaved(); } catch (e) { /* 記憶がない場合など */ }
     renderAll();
@@ -1904,6 +2170,46 @@ function init() {
   });
   $('#dTo').addEventListener('change', renderDrug);
 
+  // カレンダー
+  const moveMonth = n => { const d = new Date(state.cal.y, state.cal.m + n, 1); state.cal.y = d.getFullYear(); state.cal.m = d.getMonth(); renderCal(); };
+  $('#calPrev').addEventListener('click', () => moveMonth(-1));
+  $('#calNext').addEventListener('click', () => moveMonth(1));
+  $('#calToday').addEventListener('click', () => { const t = todayMidnight(); state.cal = { y: t.getFullYear(), m: t.getMonth(), sel: isoOf(t) }; renderCal(); });
+  $('#calGrid').addEventListener('click', e => { const b = e.target.closest('.cal-cell'); if (!b) return; state.cal.sel = b.dataset.iso; renderCal(); });
+  $('#calHint').addEventListener('click', e => { if (e.target.closest('#calClover')) openSettings('clover'); });
+  $('#calDay').addEventListener('click', e => {
+    const b = e.target.closest('[data-stage]'); if (!b) return;
+    const id = +b.closest('.yrow').dataset.card, c = state.cards.find(x => x.id === id);
+    if (!c) return;
+    setStage(c, +b.dataset.stage);
+    renderCal();
+  });
+  // 設定：カレンダーのタブを出すかどうか
+  $('#calChips').addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    state.showCal = b.dataset.cal === '1';
+    persistConfig();
+    applyCal();
+    if (state.files.length) switchTab(state.tab);
+  });
+  // 設定：アプリの更新。ページを読み直して、GitHubに上げた新しいファイルに切り替える
+  // （この端末に記憶した内容は同じ場所に残る。更新の前後の版を比べるため、今の版を一時的に控えておく）
+  $('#setVer').textContent = APP_VERSION;
+  $('#btnUpdate').addEventListener('click', () => {
+    try { sessionStorage.setItem('yosei-update-from', APP_VERSION); } catch (e) { /* 控えられなくても更新はできる */ }
+    $('#btnUpdate').disabled = true; $('#btnUpdate').textContent = '更新しています…';
+    location.reload();
+  });
+  // 設定：🍀（精神科）の医療機関
+  const cloverChanged = () => { persistConfig(); renderClover(); if (state.tab === 'cal' && state.files.length) renderCal(); };
+  $('#cloverWords').addEventListener('input', debounce(() => { state.clover.text = $('#cloverWords').value; cloverChanged(); }, 250));
+  $('#cloverList').addEventListener('click', e => {
+    const b = e.target.closest('[data-hosp]'); if (!b || b.classList.contains('byword')) return;
+    const k = b.dataset.hosp, i = state.clover.picks.indexOf(k);
+    if (i >= 0) state.clover.picks.splice(i, 1); else state.clover.picks.push(k);
+    cloverChanged();
+  });
+
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-open]');
     if (o) { openCard(+o.dataset.open); return; }
@@ -1934,7 +2240,14 @@ function init() {
   });
   renderAll();
   // 前回この端末に記憶した内容があれば、すぐに使えるようにする
-  restoreSaved().then(ok => { if (ok && !state.files.some(f => f.file)) renderAll(); });
+  Promise.all([restoreSaved(), loadExtras()]).then(([ok]) => {
+    if (ok && !state.files.some(f => f.file)) renderAll(); else { renderClover(); applyCal(); if (state.files.length && !state.loading) switchTab(state.tab); }
+    // 「最新の版に更新する」で読み直した直後なら、結果を知らせる
+    let from = null;
+    try { from = sessionStorage.getItem('yosei-update-from'); sessionStorage.removeItem('yosei-update-from'); } catch (e) { /* 何もしない */ }
+    if (from && from !== APP_VERSION) showNotice('新しい版（' + APP_VERSION + '）に更新しました。', 'ok');
+    else if (from) showNotice('新しい版は見つかりませんでした（今の版：' + APP_VERSION + '）。GitHubに上げてから反映されるまで、10分ほどかかることがあります。', 'warn');
+  });
 }
 init();
 </script>
