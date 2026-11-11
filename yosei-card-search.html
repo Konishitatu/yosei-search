@@ -294,7 +294,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <li><b>来局予想日</b>：「日付を指定」を選んで日付を入れると、その日までに来局予定のカードだけを表示します。薬品名を空にすると、その日までのカードを一覧できます。</li>
       <li><b>並び順</b>：「日付の古い順」は、来局予想日がいちばん前のカードから並べます（過ぎた日付 → 今日 → 先の日付）。「日付の新しい順」は、いちばん先の日付のカードから並べます（先の日付 → 今日 → 過ぎた日付）。</li>
       <li>薬を2列に並べたカードや、スペースを2つ以上空けて並べた薬も、1剤ずつ別々に読み取ります。「読み取った文字（そのまま）」では、区切った位置を「｜」で表示します。</li>
-      <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日（550327 や 55.3.27）・医療機関名で探せます。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
+      <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日・医療機関名で探せます。生年月日は、和暦（550327、55.3.27）でも西暦（19800327、1980.3.27）でも探せます（カードにどちらで書いてあっても見つかります）。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
       <li><b>カレンダー</b>：来局予想日ごとに、予製がどこまで進んでいるかを確かめます。日付を押すと、その日の患者さんが左（🍀＝精神科）と右（それ以外）に分かれて並びます。患者さんごとに「未作成／作成済／不足あり／完成」のどれかを押して印を付けます（作成済＝鑑査待ち、不足あり＝鑑査は済んだが不足分の補充待ち）。付けた印は、この端末の中にだけ記憶します。患者さんが来局してカードの来局予想日が新しくなると、印は「未作成」に戻ります。🍀にする医療機関は、右上の「設定」で選びます。カレンダーのタブは、最初は出ていません。使う端末で、「設定」→「カレンダー」の「表示する」を選ぶと出ます。</li>
@@ -379,7 +379,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.11-4';
+const APP_VERSION = 'v2026.11.11-5';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1174,21 +1174,51 @@ async function extractPage(pdf, page, fontCache) {
    3. カードの中身を読み分ける
    ========================================================= */
 const DATE_RE = /^(\d{1,2})\s*[\/月]\s*(\d{1,2})\s*日?\s*(?:\(\s*[月火水木金土日]\s*\))?\s*(.*)$/;
-const BIRTH_SEP_RE = new RegExp('[(\\[]?\\s*(' + ERA_CLASS + ')?\\s*(\\d{1,2})\\s*[.\\/・-]\\s*(\\d{1,2})\\s*[.\\/・-]\\s*(\\d{1,2})\\s*[)\\]]?\\s*$');
-const BIRTH_6_RE = new RegExp('[(\\[]?\\s*(' + ERA_CLASS + ')?\\s*(\\d{2})(\\d{2})(\\d{2})\\s*[)\\]]?\\s*$');
+// 生年月日は、和暦（470314、S47.3.14）でも西暦（19720314、1972.3.14）でも、両方を並べて書いてあっても読み取る
+const B_PRE = '(^|[^\\d.\\/・-])[(\\[]?\\s*', B_POST = '\\s*[)\\]]?\\s*$';
+const BIRTH_RES = [
+  ['w', new RegExp(B_PRE + '()((?:18|19|20)\\d{2})(\\d{2})(\\d{2})' + B_POST)],
+  ['w', new RegExp(B_PRE + '()((?:18|19|20)\\d{2})\\s*[.\\/・年-]\\s*(\\d{1,2})\\s*[.\\/・月-]\\s*(\\d{1,2})\\s*日?' + B_POST)],
+  ['j', new RegExp(B_PRE + '(' + ERA_CLASS + ')?\\s*(\\d{1,2})\\s*[.\\/・年-]\\s*(\\d{1,2})\\s*[.\\/・月-]\\s*(\\d{1,2})\\s*日?' + B_POST)],
+  ['j', new RegExp(B_PRE + '(' + ERA_CLASS + ')?\\s*(\\d{2})(\\d{2})(\\d{2})' + B_POST)],
+];
 const ERA_MAP = { 明: 'M', 大: 'T', 昭: 'S', 平: 'H', 令: 'R' };
+const ERA_BASE = { M: 1867, T: 1911, S: 1925, H: 1988, R: 2018 };
+// 西暦の日付から和暦（元号と年）を求める
+function toWareki(y, mm, dd) {
+  const n = y * 10000 + mm * 100 + dd;
+  const era = n >= 20190501 ? 'R' : n >= 19890108 ? 'H' : n >= 19261225 ? 'S' : n >= 19120730 ? 'T' : 'M';
+  return { era, yy: y - ERA_BASE[era] };
+}
 
 function isDateLine(n) {
   const m = DATE_RE.exec(n);
   return !!m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31;
 }
+// 文の終わりにある生年月日を1つ取り出す
+function peelBirth(rest) {
+  for (const [kind, re] of BIRTH_RES) {
+    const m = re.exec(rest);
+    if (!m) continue;
+    const yy = +m[3], mm = +m[4], dd = +m[5];
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) continue;
+    return { kind, era: m[2] ? (ERA_MAP[m[2]] || m[2].toUpperCase()) : '', yy, mm, dd, rest: rest.slice(0, m.index + m[1].length).trim() };
+  }
+  return null;
+}
+// birth = { era, yy, mm, dd（和暦）, y（西暦の年。わからなければ null）, src（書き方 w:西暦 j:和暦 wj:両方） }
 function takeBirth(rest) {
-  const bm = BIRTH_SEP_RE.exec(rest) || BIRTH_6_RE.exec(rest);
-  if (!bm) return null;
-  const yy = +bm[2], mm = +bm[3], dd = +bm[4];
-  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
-  const era = bm[1] ? (ERA_MAP[bm[1]] || bm[1].toUpperCase()) : '';
-  return { birth: { era, yy, mm, dd }, rest: rest.slice(0, bm.index).trim() };
+  const a = peelBirth(rest);
+  if (!a) return null;
+  let w = a.kind === 'w' ? a : null, j = a.kind === 'j' ? a : null, out = a.rest;
+  const b = peelBirth(a.rest);
+  if (b && b.kind !== a.kind) { if (b.kind === 'w') w = b; else j = b; out = b.rest; }
+  if (w) {
+    const k = toWareki(w.yy, w.mm, w.dd);
+    const mismatch = !!j && (j.yy !== k.yy || j.mm !== w.mm || j.dd !== w.dd || (j.era && j.era !== k.era));
+    return { birth: { era: k.era, yy: k.yy, mm: w.mm, dd: w.dd, y: w.yy, src: j ? 'wj' : 'w' }, rest: out, mismatch };
+  }
+  return { birth: { era: j.era, yy: j.yy, mm: j.mm, dd: j.dd, y: ERA_BASE[j.era] ? ERA_BASE[j.era] + j.yy : null, src: 'j' }, rest: out, mismatch: false };
 }
 
 // 薬の行を1剤ずつに分ける（2列に並べた薬や、スペース2つ以上で区切った薬を別々にする）
@@ -1236,7 +1266,7 @@ function parseCardText(lineTexts) {
   // 日付だけの行で、次の行に氏名がある場合
   if (!rest && items[di + 1] && (/\(.*\)/.test(items[di + 1]) || takeBirth(untab(items[di + 1])))) { rest = untab(items[di + 1]); drugStart = di + 2; }
   const b = takeBirth(rest);
-  if (b) { r.birth = b.birth; rest = b.rest; }
+  if (b) { r.birth = b.birth; rest = b.rest; if (b.mismatch) r.warns.push('生年月日の西暦と和暦が合っていません'); }
   const km = /\(([^()]*)\)/.exec(rest);
   if (km) { r.kana = km[1].replace(/\s+/g, ' ').trim(); rest = (rest.slice(0, km.index) + ' ' + rest.slice(km.index + km[0].length)).trim(); }
   r.name = rest.replace(/\s+/g, ' ').trim();
@@ -1290,13 +1320,13 @@ function matchDrug(key, parts) {
 }
 function parsePatientQuery(q) {
   const out = [];
-  const reBirthSep = new RegExp('^' + ERA_CLASS + '?(\\d{1,2})[.\\/・-](\\d{1,2})[.\\/・-](\\d{1,2})$');
-  const reBirthNum = new RegExp('^' + ERA_CLASS + '?(\\d{2,6})$');
+  const reBirthSep = new RegExp('^' + ERA_CLASS + '?(\\d{1,4})[.\\/・-](\\d{1,2})[.\\/・-](\\d{1,2})$');
+  const reBirthNum = new RegExp('^' + ERA_CLASS + '?(\\d{2,8})$');
   for (const term of String(q).normalize('NFKC').split(/\s+/)) {
     if (!term) continue;
     let m;
     if ((m = /^(\d{1,2})\/(\d{1,2})$/.exec(term))) out.push({ visit: [+m[1], +m[2]] });
-    else if ((m = reBirthSep.exec(term))) out.push({ birth: pad2(m[1]) + pad2(m[2]) + pad2(m[3]) });
+    else if ((m = reBirthSep.exec(term))) out.push(m[1].length > 2 ? { birthW: m[1].padStart(4, '0') + pad2(m[2]) + pad2(m[3]) } : { birth: pad2(m[1]) + pad2(m[2]) + pad2(m[3]) });
     else if ((m = reBirthNum.exec(term))) out.push({ birthPart: m[1] });
     else { const k = normKey(term); if (k) out.push({ txt: k }); }
   }
@@ -1306,7 +1336,8 @@ function matchPatient(c, terms) {
   return terms.every(t => {
     if (t.visit) return c.month === t.visit[0] && c.day === t.visit[1];
     if (t.birth) return c.birthDigits === t.birth;
-    if (t.birthPart) return c.birthDigits.includes(t.birthPart);
+    if (t.birthW) return c.birthWs.includes(t.birthW);
+    if (t.birthPart) return c.birthDigits.includes(t.birthPart) || c.birthWs.some(w => w.includes(t.birthPart));
     return c.nameKey.includes(t.txt) || c.kanaKey.includes(t.txt) || c.hospKey.includes(t.txt);
   });
 }
@@ -1336,7 +1367,13 @@ function relLabel(diff) {
 }
 const fmtMD = d => (d.getMonth() + 1) + '/' + d.getDate();
 const fmtYMD = d => d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）';
-const fmtBirth = b => b.era + b.yy + '.' + pad2(b.mm) + '.' + pad2(b.dd);
+// 生年月日は、カードに書いてある暦で表示する（両方書いてあるときは、西暦（和暦））
+function fmtBirth(b) {
+  const md = '.' + pad2(b.mm) + '.' + pad2(b.dd);
+  if (b.src === 'w') return b.y + md;
+  if (b.src === 'wj') return b.y + md + '（' + b.era + b.yy + md + '）';
+  return b.era + b.yy + md;
+}
 const fmtDT = d => (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 // ファイル名から日付を読む（例：予製カード1106.pdf、2026-11-06.pdf、11.6.pdf、11月6日.pdf、R8.11.6.pdf）
 function dateFromName(name, ref) {
@@ -1394,6 +1431,13 @@ function isClover(c, words) {
 // 検索に使う「そろえた文字」などを付け足す（読み込み直後・記憶から戻したときの共通処理）
 function finishCard(c, drugTexts) {
   c.birthDigits = c.birth ? pad2(c.birth.yy) + pad2(c.birth.mm) + pad2(c.birth.dd) : '';
+  // 西暦8けたでも探せるようにする。元号が書かれていない和暦は、ありうる元号（昭和・平成・令和・大正）をすべて候補にする
+  c.birthWs = [];
+  if (c.birth) {
+    const b = c.birth, tail = pad2(b.mm) + pad2(b.dd);
+    if (b.y) c.birthWs.push(b.y + tail);
+    else if (!b.era) for (const [e, max] of [['S', 64], ['H', 31], ['R', new Date().getFullYear() - 2018], ['T', 15]]) if (b.yy >= 1 && b.yy <= max) c.birthWs.push((ERA_BASE[e] + b.yy) + tail);
+  }
   c.nameKey = normKey(c.name); c.kanaKey = normKey(c.kana); c.hospKey = normKey(c.hospital);
   c.drugs = drugTexts.map(t => ({ text: t, key: drugKey(t) }));
   c.dup = 0;
@@ -1414,6 +1458,8 @@ function makeCard(rec, pageNo, lines, images) {
    6b. この端末に記憶する（IndexedDB＝ブラウザの中にある保存場所。端末の外には出ません）
    ========================================================= */
 const DB_NAME = 'yosei-card-search', SCHEMA = 1;
+// カードの文字の読み取り方（parseCardText）を直したら、この番号を上げる。記憶している内容を、開いたときに読み取り直す
+const PARSER_VERSION = 2;
 let dbPromise = null;
 function idb() {
   if (!dbPromise) {
@@ -1508,7 +1554,7 @@ async function savedPhoto(key) {
 function buildMeta() {
   const idx = new Map(state.files.map((f, i) => [f, i]));
   return {
-    schema: SCHEMA, gen: state.gen, loadedAt: state.loadedAt.getTime(),
+    schema: SCHEMA, pv: PARSER_VERSION, gen: state.gen, loadedAt: state.loadedAt.getTime(),
     files: state.files.map(f => ({ key: f.key, zip: f.zip || '', created: f.created ? f.created.getTime() : null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0 })),
     cards: state.cards.map(c => ({
       id: c.id, f: idx.get(c.fileRec), page: c.page, rawLines: c.rawLines, month: c.month, day: c.day,
@@ -1525,6 +1571,7 @@ async function restoreSaved() {
   } catch (e) { return false; }
   if (!meta || meta.schema !== SCHEMA || !Array.isArray(meta.cards)) return false;
   if (state.loading || state.files.length) return false; // すでに新しく読み込み始めている
+  const reparse = meta.pv !== PARSER_VERSION;   // 前の版で読み取った内容
   state.gen = meta.gen;
   state.files = meta.files.map(f => ({ key: f.key, zip: f.zip || '', file: null, ent: null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0, created: f.created ? new Date(f.created) : null }));
   let maxId = 0;
@@ -1535,12 +1582,16 @@ async function restoreSaved() {
       name: s.name, kana: s.kana, birth: s.birth, hospital: s.hospital, issues: s.issues, warns: s.warns,
       hasImage: s.hasImage, photo: s.photo ? { m: s.photo } : null,
     };
-    return finishCard(c, s.drugs);
+    if (!reparse) return finishCard(c, s.drugs);
+    const p = parseCardText(s.rawLines || []);
+    Object.assign(c, { month: p.month, day: p.day, name: p.name, kana: p.kana, birth: p.birth, hospital: p.hospital, issues: p.issues, warns: p.warns });
+    return finishCard(c, p.drugs);
   });
   state.nextId = maxId + 1;
   state.loadedAt = new Date(meta.loadedAt);
   state.restored = true; state.saved = true;
   computeDup();
+  if (reparse) saveMeta(buildMeta()).catch(() => {});
   return true;
 }
 
