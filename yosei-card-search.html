@@ -65,7 +65,11 @@ h1{font-size:26px;margin:0;letter-spacing:.02em}
 .frow input[type=date]{font:inherit;font-size:17px;padding:6px 8px;border:1px solid #b9b5ab;border-radius:8px;min-height:42px;background:#fff;color:var(--ink)}
 .summary{margin:12px 0 10px;font-size:17px}
 .summary p{margin:4px 0}
-.variants{color:var(--muted);font-size:16px}
+.variants{color:var(--muted);font-size:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.vchip{font:inherit;font-size:16px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;min-height:40px;cursor:pointer}
+.vchip b{margin-left:4px}
+.vchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.vchip.vmore{border-style:dashed;color:var(--muted)}
 .hint{color:var(--muted);background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:14px 16px;margin:0}
 .res{display:grid;grid-template-columns:128px minmax(0,1fr) auto;gap:10px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;align-items:start}
 .res-date{text-align:center;border-radius:8px;padding:8px 4px;background:var(--soft)}
@@ -268,7 +272,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.06-8';
+const APP_VERSION = 'v2026.11.11-1';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1257,6 +1261,7 @@ function parseISODate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); 
 const state = {
   files: [], cards: [], nextId: 1, loadedAt: null,
   tab: 'drug', mode: 'all', sort: 'asc', limits: { drug: 200, patient: 200 },
+  pick: null, varAll: false,   // 薬の候補（カードでの書き方）から選んだもの／候補を全部出すか
   photoUrl: null, dlgSeq: 0,
   gen: '', restored: false, saved: null, loading: false,
 };
@@ -1664,7 +1669,7 @@ function renderDrug() {
     listEl.innerHTML = '';
     return;
   }
-  const rows = [];
+  let rows = [];
   for (const c of state.cards) {
     const v = inferVisit(c, today);
     if (!passDate(v)) continue;
@@ -1672,20 +1677,38 @@ function renderDrug() {
     if (parts.length) { matched = c.drugs.filter(d => matchDrug(d.key, parts)); if (!matched.length) continue; }
     rows.push({ c, v, matched });
   }
-  sortRows(rows);
   if (!rows.length) {
     sumEl.innerHTML = '<p class="hint">見つかりませんでした。' + (parts.length ? '薬品名を短くする（例：「アムロジピン」だけにする）と見つかることがあります。' : '') + (state.mode !== 'all' ? '来局予想日の条件を「すべて」にすると増えることがあります。' : '') + '</p>';
     listEl.innerHTML = '';
     return;
   }
-  const past = rows.filter(r => r.v && r.v.diff < 0).length;
-  let html = '<p><b>' + rows.length + ' 件</b>の予製カード' + (parts.length ? 'に入っています' : 'があります') + (past ? '（うち来局予想日を過ぎたカード ' + past + ' 件）' : '') + '</p>';
+  // 候補（カードでの書き方）：空白・全角半角・「錠」「mg」の違いだけのものは1つにまとめる
+  let vhtml = '';
   if (parts.length) {
-    const cnt = new Map();
-    for (const r of rows) for (const d of r.matched) cnt.set(d.text, (cnt.get(d.text) || 0) + 1);
-    const list = Array.from(cnt).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'));
-    html += '<p class="variants">カードでの書き方：' + list.slice(0, 12).map(([t, n]) => esc(t) + ' <b>' + n + '</b>件').join('／') + (list.length > 12 ? '　ほか' : '') + '</p>';
-  }
+    const grp = new Map();
+    for (const r of rows) for (const d of r.matched) {
+      let g = grp.get(d.key);
+      if (!g) grp.set(d.key, g = { key: d.key, n: 0, texts: new Map() });
+      g.n++; g.texts.set(d.text, (g.texts.get(d.text) || 0) + 1);
+    }
+    const list = Array.from(grp.values());
+    // 表示名は、その中でいちばん多い書き方
+    for (const g of list) g.label = Array.from(g.texts).sort((a, b) => b[1] - a[1] || a[0].length - b[0].length || a[0].localeCompare(b[0], 'ja'))[0][0];
+    list.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'ja'));
+    if (state.pick && !grp.has(state.pick)) state.pick = null;
+    const shown = state.varAll ? list : list.slice(0, 12);
+    if (state.pick && !shown.some(g => g.key === state.pick)) shown.push(grp.get(state.pick));
+    vhtml = '<div class="variants"><span>カードでの書き方（押すとしぼり込み）：</span>' +
+      shown.map(g => '<button type="button" class="vchip" data-pick="' + esc(g.key) + '" aria-pressed="' + (g.key === state.pick) + '">' + esc(g.label) + '<b>' + g.n + '</b>件</button>').join('') +
+      (list.length > shown.length ? '<button type="button" class="vchip vmore" data-varall="1">ほか ' + (list.length - shown.length) + ' 種類を表示</button>' : '') +
+      (state.pick ? '<button type="button" class="vchip vmore" data-pick="">しぼり込みをやめる</button>' : '') + '</div>';
+    if (state.pick) {
+      rows = rows.filter(r => { r.matched = r.matched.filter(d => d.key === state.pick); return r.matched.length; });
+    }
+  } else state.pick = null;
+  sortRows(rows);
+  const past = rows.filter(r => r.v && r.v.diff < 0).length;
+  let html = '<p><b>' + rows.length + ' 件</b>の予製カード' + (parts.length ? 'に入っています' : 'があります') + (past ? '（うち来局予想日を過ぎたカード ' + past + ' 件）' : '') + '</p>' + vhtml;
   sumEl.innerHTML = html;
   renderList(rows, listEl, 'drug', false);
 }
@@ -1848,7 +1871,16 @@ function init() {
   });
 
   for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => switchTab(b.dataset.tab));
-  $('#qDrug').addEventListener('input', debounce(() => { state.limits.drug = 200; renderDrug(); }, 150));
+  $('#qDrug').addEventListener('input', debounce(() => { state.limits.drug = 200; state.pick = null; state.varAll = false; renderDrug(); }, 150));
+  // 候補（カードでの書き方）を押すと、その書き方だけにしぼる。もう一度押すと戻る
+  $('#drugSummary').addEventListener('click', e => {
+    const b = e.target.closest('.vchip');
+    if (!b) return;
+    if (b.dataset.varall) state.varAll = true;
+    else state.pick = (b.dataset.pick && b.dataset.pick !== state.pick) ? b.dataset.pick : null;
+    state.limits.drug = 200;
+    renderDrug();
+  });
   $('#qPatient').addEventListener('input', debounce(() => { state.limits.patient = 200; renderPatient(); }, 150));
   // 検索を始めたら、お知らせはすぐ消す
   $('#qDrug').addEventListener('input', hideNotice);
