@@ -17,7 +17,7 @@
   --warn-ink:#8a4600; --warn-bg:#fdead2;
   --danger-ink:#a3191f; --danger-bg:#fde2e0;
   --ok-ink:#1e6a33; --ok-bg:#e1f1e5;
-  --s0:#c9c6bd; --s1:#3d7fb5; --s2:#e08a1e; --s3:#2e8b4a; --clover:#eef6e6;
+  --s0:#c9c6bd; --s1:#3d7fb5; --s2:#8e6bc4; --s3:#2e8b4a; --short:#c96f00; --clover:#eef6e6;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}
@@ -162,16 +162,27 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 .yrow{background:#fff;border:1px solid var(--line);border-left:6px solid var(--s0);border-radius:10px;padding:8px 10px;margin-bottom:8px}
 .yrow.s1{border-left-color:var(--s1)}.yrow.s2{border-left-color:var(--s2)}.yrow.s3{border-left-color:var(--s3)}
 .yrow-top{display:flex;gap:8px;align-items:flex-start}
+.yrow-top .btn{flex:0 0 auto;white-space:nowrap}
 .yrow-main{flex:1 1 auto;min-width:0}
 .yrow-name{font-weight:700;font-size:18px;line-height:1.4}
 .yrow-name .kana{font-size:15px;font-weight:400;color:var(--muted);margin-left:8px}
 .yrow-sub{font-size:15px;color:var(--muted)}
-.stg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px}
-.stg button{appearance:none;-webkit-appearance:none;font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;padding:2px;color:var(--ink);white-space:nowrap}
+.stg{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.stg button{appearance:none;-webkit-appearance:none;font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;padding:2px 8px;color:var(--ink);white-space:nowrap;flex:1 1 auto}
 .stg button[aria-pressed="true"]{color:#fff;font-weight:700;border-color:transparent}
 .stg .b0[aria-pressed="true"]{background:#6f6c64}
 .stg .b1[aria-pressed="true"]{background:#2f6fa3}
-.stg .b2[aria-pressed="true"]{background:#b06400}
+.stg .b2[aria-pressed="true"]{background:#6d4aa8}
+/* 「不足あり」の印（段階とは別に付ける。完成にすると消える） */
+.yrow.short{background:#fff7ec}
+.btn.shortbtn{color:var(--warn-ink);border-style:dashed;border-color:#d9a25e;white-space:nowrap}
+.btn.shortbtn[aria-pressed="true"]{background:var(--short);border-style:solid;border-color:transparent;color:#fff;font-weight:700}
+.cal-short{margin-left:auto;background:var(--short);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:0 6px;line-height:1.6;white-space:nowrap}
+.sw.sh{background:var(--short)}
+.askdlg{width:min(540px,94vw)}
+.ask-body{padding:20px}
+.ask-body h3{margin:0 0 8px;font-size:21px}
+.ask-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:18px}
 .stg .b3[aria-pressed="true"]{background:#24783d}
 @media (max-width:700px){.day-cols{grid-template-columns:1fr}.cal-halves{grid-template-columns:1fr}.cal-half{font-size:12px}.cal-cell{min-height:70px}}
 /* 設定の中の「🍀の医療機関」 */
@@ -277,9 +288,10 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <span class="lg"><i class="sw cl"></i>枠の左＝🍀（精神科）／右＝それ以外</span>
       <span class="lg">数字＝完成した数／全体の数</span>
       <span class="lg"><i class="sw st0"></i>未作成</span>
-      <span class="lg"><i class="sw st1"></i>作成済（鑑査待ち）</span>
-      <span class="lg"><i class="sw st2"></i>鑑査済・不足あり（補充待ち）</span>
+      <span class="lg"><i class="sw st1"></i>ピッキング済み</span>
+      <span class="lg"><i class="sw st2"></i>鑑査済</span>
       <span class="lg"><i class="sw st3"></i>完成</span>
+      <span class="lg"><i class="sw sh"></i>不足＝「不足あり」の件数</span>
     </div>
     <div id="calHint"></div>
     <div class="cal-grid" id="calGrid"></div>
@@ -297,7 +309,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <li><b>患者さんで探す</b>：氏名・ふりがな・生年月日・医療機関名で探せます。生年月日は、和暦（550327、55.3.27）でも西暦（19800327、1980.3.27）でも探せます（カードにどちらで書いてあっても見つかります）。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
-      <li><b>カレンダー</b>：来局予想日ごとに、予製がどこまで進んでいるかを確かめます。日付を押すと、その日の患者さんが左（🍀＝精神科）と右（それ以外）に分かれて並びます。患者さんごとに「未作成／作成済／不足あり／完成」のどれかを押して印を付けます（作成済＝鑑査待ち、不足あり＝鑑査は済んだが不足分の補充待ち）。付けた印は、この端末の中にだけ記憶します。患者さんが来局してカードの来局予想日が新しくなると、印は「未作成」に戻ります。🍀にする医療機関は、右上の「設定」で選びます。カレンダーのタブは、最初は出ていません。使う端末で、「設定」→「カレンダー」の「表示する」を選ぶと出ます。</li>
+      <li><b>カレンダー</b>：来局予想日ごとに、予製がどこまで進んでいるかを確かめます。日付を押すと、その日の患者さんが左（🍀＝精神科）と右（それ以外）に分かれて並びます。患者さんごとに「未作成／ピッキング済み／鑑査済／完成」のどれかを押して印を付けます。薬が足りないときは、段階とは別に、「カード」の左の「不足あり」を押して印を付けます（もう一度押すと外れます）。「不足あり」が付いたまま「完成」を押すと、不足分を補充したかを確かめてから完成にし、「不足あり」の印を消します。付けた印は、この端末の中にだけ記憶します。患者さんが来局してカードの来局予想日が新しくなると、印は「未作成」に戻ります。🍀にする医療機関は、右上の「設定」で選びます。カレンダーのタブは、最初は出ていません。使う端末で、「設定」→「カレンダー」の「表示する」を選ぶと出ます。</li>
       <li><b>アプリの更新</b>：新しいファイルをGitHubに上げたあと、右上の「設定」→「最新の版に更新する」を押すと、新しい版に切り替わります。読み込んだ内容はそのまま残るので、ホーム画面のアイコンを作り直す必要はありません。</li>
       <li><b>読み取り結果の確認</b>：来局予想日・氏名・薬が読み取れなかったカード、写真だけのページ、同じ患者さんのカードが2枚あるときは、右上の「設定」の中の「読み取り結果の確認」に一覧で出ます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。</li>
       <li><b>データの更新</b>：PDFを入れ直したら、右上の「設定」（歯車のマーク）→「PDF・ZIPを読み込む」でもう一度読み込みます。前の内容とまるごと入れ替わり、この端末の記憶も新しくなります。画面の上に出る「◯/◯ 来局分まで更新済み」は、PDFのファイル名に入っている日付です（その日に来局した患者さんまで、カードを更新してあるという意味）。ファイル名に日付がないときは、「いちばん新しいPDF」の作成日時を表示します。</li>
@@ -369,6 +381,18 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
   </div>
 </dialog>
 
+<!-- 「不足あり」が付いた予製を完成にする前の確認 -->
+<dialog id="askDlg" class="askdlg" aria-labelledby="askTitle">
+  <div class="ask-body">
+    <h3 id="askTitle">不足分は補充しましたか？</h3>
+    <p class="note" id="askText"></p>
+    <div class="ask-btns">
+      <button class="btn" type="button" id="askNo">まだ補充していない（戻る）</button>
+      <button class="btn primary" type="button" id="askYes">補充した（完成にする）</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <div class="dlg-head"><h3 id="dlgTitle"></h3><button class="btn small" type="button" id="dlgClose">閉じる</button></div>
   <div class="dlg-body">
@@ -379,7 +403,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.11-5';
+const APP_VERSION = 'v2026.11.11-6';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1410,18 +1434,20 @@ const state = {
   gen: '', restored: false, saved: null, loading: false,
   status: new Map(),                 // カレンダーの印：カードのキー → { s: 1〜3, t: 付けた時刻 }
   clover: { text: '', picks: [] },   // 🍀（精神科）にする医療機関：名前の一部（入力した文字）と、一覧から選んだもの
+  askId: 0,                          // 「不足分は補充しましたか？」を出しているカード
   cal: { y: 0, m: 0, sel: '' },      // カレンダーで表示している年・月と、選んでいる日
   showCal: false,                    // カレンダーのタブを出すか。最初は出さない。端末ごとに設定で選び、選んだ内容は版を更新しても変えない
 };
 
-/* カレンダーの印（進み具合）。0:未作成 1:作成済（鑑査待ち） 2:鑑査済・不足あり（補充待ち） 3:完成 */
-const STAGES = ['未作成', '作成済', '不足あり', '完成'];
+/* カレンダーの印。段階 s … 0:未作成 1:ピッキング済み 2:鑑査済 3:完成／f … 「不足あり」の印（段階とは別。完成にすると消える） */
+const STAGES = ['未作成', 'ピッキング済み', '鑑査済', '完成'];
 // 患者さん（氏名＋生年月日＋医療機関）と来局予想日で見分ける。PDFを読み込み直しても印は残り、
 // 来局してカードの来局予想日が変わると、新しい日付の分は「未作成」から始まる
 function statusKey(c) {
   return (c.nameKey ? c.nameKey + '|' + c.birthDigits + '|' + c.hospKey : '?|' + c.fileRec.key + '|' + c.page) + '|' + c.month + '/' + c.day;
 }
 function stageOf(c) { const e = state.status.get(statusKey(c)); return e ? e.s : 0; }
+function shortOf(c) { const e = state.status.get(statusKey(c)); return !!(e && e.f); }
 function cloverWords() { return state.clover.text.split(/[、,，\s]+/).map(normKey).filter(Boolean); }
 function isClover(c, words) {
   if (!c.hospKey) return false;
@@ -1519,7 +1545,7 @@ async function saveExtra(key, val) {
 }
 let extraWarned = false;
 function persistStatus() {
-  saveExtra('status', Array.from(state.status)).catch(() => {
+  saveExtra('status', { v: 2, list: Array.from(state.status) }).catch(() => {
     if (!extraWarned) { extraWarned = true; showNotice('カレンダーの印を、この端末に記憶できませんでした（ページを閉じると消えます）。', 'warn'); }
   });
 }
@@ -1529,14 +1555,22 @@ async function loadExtras() {
     const db = await idb();
     const st = db.transaction('meta', 'readonly').objectStore('meta');
     const [status, config] = await Promise.all([reqDone(st.get('status')), reqDone(st.get('config'))]);
-    if (Array.isArray(status)) for (const [k, e] of status) if (e && e.s >= 1 && e.s <= 3 && !state.status.has(k)) state.status.set(k, e);
+    // 前の版（段階が 未作成／作成済／不足あり／完成 だったころ）の印は、新しい形に直す：「不足あり」→「鑑査済」＋「不足あり」の印
+    const old = Array.isArray(status), list = old ? status : (status && status.v === 2 && Array.isArray(status.list) ? status.list : []);
+    for (const [k, e] of list) {
+      if (!e || state.status.has(k)) continue;
+      const s = e.s >= 1 && e.s <= 3 ? e.s : 0, f = s === 3 ? 0 : (old ? (e.s === 2 ? 1 : 0) : (e.f ? 1 : 0));
+      if (s || f) state.status.set(k, { s, f, t: e.t || Date.now() });
+    }
+    if (old) persistStatus();
     if (config && typeof config.showCal === 'boolean') state.showCal = config.showCal;   // この端末で選んだ設定をそのまま使う
     if (config && config.clover) state.clover = { text: String(config.clover.text || ''), picks: Array.isArray(config.clover.picks) ? config.clover.picks.map(String) : [] };
   } catch (e) { /* 記憶が使えない端末では、開いている間だけ使える */ }
 }
-function setStage(c, s) {
+function setStatus(c, s, f) {
   const k = statusKey(c);
-  if (s) state.status.set(k, { s, t: Date.now() }); else state.status.delete(k);
+  if (s === 3) f = false;   // 完成に「不足あり」は残さない
+  if (s || f) state.status.set(k, { s, f: f ? 1 : 0, t: Date.now() }); else state.status.delete(k);
   persistStatus();
 }
 // 今のカードに当てはまらなくなった古い印を片づける（来局して日付が変わった分など。念のため14日は残す）
@@ -1852,6 +1886,7 @@ function calData(today) {
   return m;
 }
 const stageCount = list => { const n = [0, 0, 0, 0]; for (const c of list) n[stageOf(c)]++; return n; };
+const shortCount = list => list.reduce((n, c) => n + (shortOf(c) ? 1 : 0), 0);
 function halfHtml(list, cls) {
   if (!list.length) return '<span class="cal-half ' + cls + '"></span>';
   const n = stageCount(list);
@@ -1859,14 +1894,15 @@ function halfHtml(list, cls) {
     [3, 2, 1, 0].map(s => (n[s] ? '<i class="st' + s + '" style="flex:' + n[s] + '"></i>' : '')).join('') + '</span></span>';
 }
 function dayColHtml(list, cls, title) {
-  const n = stageCount(list);
+  const n = stageCount(list), sh = shortCount(list);
   list = list.slice().sort((a, b) => (a.kanaKey || a.nameKey).localeCompare(b.kanaKey || b.nameKey, 'ja'));
-  return '<div class="day-col ' + cls + '"><h4>' + title + '<span>' + (list.length ? '完成 ' + n[3] + '／' + list.length + ' 件' : 'なし') + '</span></h4>' +
+  return '<div class="day-col ' + cls + '"><h4>' + title + '<span>' + (list.length ? '完成 ' + n[3] + '／' + list.length + ' 件' + (sh ? '・不足あり ' + sh + ' 件' : '') : 'なし') + '</span></h4>' +
     list.map(c => {
-      const s = stageOf(c);
-      return '<div class="yrow s' + s + '" data-card="' + c.id + '"><div class="yrow-top"><div class="yrow-main">' +
+      const s = stageOf(c), f = shortOf(c);
+      return '<div class="yrow s' + s + (f ? ' short' : '') + '" data-card="' + c.id + '"><div class="yrow-top"><div class="yrow-main">' +
         '<div class="yrow-name">' + esc(c.name || '（氏名不明）') + (c.kana ? '<span class="kana">' + esc(c.kana) + '</span>' : '') + '</div>' +
         '<div class="yrow-sub">' + esc(c.hospital || '医療機関の記載なし') + '</div></div>' +
+        (s === 3 ? '' : '<button type="button" class="btn small shortbtn" data-short="1" aria-pressed="' + f + '">不足あり</button>') +
         '<button type="button" class="btn small" data-open="' + c.id + '">カード</button></div>' +
         '<div class="stg" role="group" aria-label="進み具合">' + STAGES.map((t, i) => '<button type="button" class="b' + i + '" data-stage="' + i + '" aria-pressed="' + (i === s) + '">' + t + '</button>').join('') + '</div></div>';
     }).join('') + '</div>';
@@ -1885,10 +1921,10 @@ function renderCal() {
   for (let i = 0; i < weeks * 7; i++) {
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), iso = isoOf(d);
     const e = data.get(iso) || { L: [], R: [] }, all = e.L.length + e.R.length;
-    const nL = stageCount(e.L), nR = stageCount(e.R), done = all > 0 && nL[3] + nR[3] === all;
+    const nL = stageCount(e.L), nR = stageCount(e.R), done = all > 0 && nL[3] + nR[3] === all, sh = shortCount(e.L) + shortCount(e.R);
     html += '<button type="button" class="cal-cell' + (d.getMonth() !== cal.m ? ' out' : '') + (iso === todayIso ? ' today' : '') + (iso === cal.sel ? ' sel' : '') + '" data-iso="' + iso + '" aria-pressed="' + (iso === cal.sel) + '"' +
-      ' aria-label="' + (d.getMonth() + 1) + '月' + d.getDate() + '日' + (all ? '、🍀 完成' + nL[3] + '／' + e.L.length + '、それ以外 完成' + nR[3] + '／' + e.R.length : '、予製なし') + '">' +
-      '<span class="cal-top"><span class="cal-d">' + d.getDate() + '</span>' + (done ? '<span class="cal-ok">✓</span>' : '') + '</span>' +
+      ' aria-label="' + (d.getMonth() + 1) + '月' + d.getDate() + '日' + (all ? '、🍀 完成' + nL[3] + '／' + e.L.length + '、それ以外 完成' + nR[3] + '／' + e.R.length + (sh ? '、不足あり' + sh + '件' : '') : '、予製なし') + '">' +
+      '<span class="cal-top"><span class="cal-d">' + d.getDate() + '</span>' + (done ? '<span class="cal-ok">✓</span>' : sh ? '<span class="cal-short">不足' + sh + '</span>' : '') + '</span>' +
       (all ? '<span class="cal-halves">' + halfHtml(e.L, 'l') + halfHtml(e.R, 'r') + '</span>' : '') + '</button>';
   }
   $('#calGrid').innerHTML = html;
@@ -2229,12 +2265,30 @@ function init() {
   $('#calGrid').addEventListener('click', e => { const b = e.target.closest('.cal-cell'); if (!b) return; state.cal.sel = b.dataset.iso; renderCal(); });
   $('#calHint').addEventListener('click', e => { if (e.target.closest('#calClover')) openSettings('clover'); });
   $('#calDay').addEventListener('click', e => {
-    const b = e.target.closest('[data-stage]'); if (!b) return;
-    const id = +b.closest('.yrow').dataset.card, c = state.cards.find(x => x.id === id);
+    const row = e.target.closest('.yrow'); if (!row) return;
+    const c = state.cards.find(x => x.id === +row.dataset.card);
     if (!c) return;
-    setStage(c, +b.dataset.stage);
+    // 「不足あり」は段階とは別の印。押すたびに付け外しする
+    if (e.target.closest('[data-short]')) { setStatus(c, stageOf(c), !shortOf(c)); renderCal(); return; }
+    const b = e.target.closest('[data-stage]'); if (!b) return;
+    const s = +b.dataset.stage;
+    // 「不足あり」が付いたまま完成にするときは、補充したかを確かめる
+    if (s === 3 && shortOf(c)) {
+      state.askId = c.id;
+      $('#askText').textContent = '「' + (c.name || '氏名不明') + '」さんの予製に「不足あり」の印が付いています。完成にすると、この印は消えます。';
+      $('#askDlg').showModal();
+      return;
+    }
+    setStatus(c, s, shortOf(c));
     renderCal();
   });
+  $('#askYes').addEventListener('click', () => {
+    const c = state.cards.find(x => x.id === state.askId);
+    $('#askDlg').close();
+    if (c) { setStatus(c, 3, false); renderCal(); }
+  });
+  $('#askNo').addEventListener('click', () => $('#askDlg').close());
+  $('#askDlg').addEventListener('click', e => { if (e.target === $('#askDlg')) $('#askDlg').close(); });
   // 設定：カレンダーのタブを出すかどうか
   $('#calChips').addEventListener('click', e => {
     const b = e.target.closest('.chip'); if (!b) return;
