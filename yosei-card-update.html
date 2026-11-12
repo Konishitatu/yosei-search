@@ -1,0 +1,2217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 外部との通信をブラウザに禁止させる設定（CSP）。取り込んだカードの内容が外へ出ない構造を保証します -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: 'self'; base-uri 'none'; form-action 'none'">
+<title>予製カード更新</title>
+<!-- iPadのホーム画面に追加したときのアイコンと名前（アイコンの画像は同じ場所に置く yosei-update-icon.png） -->
+<link rel="apple-touch-icon" href="yosei-update-icon.png">
+<meta name="apple-mobile-web-app-title" content="予製カード更新">
+<style>
+/* 検索アプリ（青）と見分けられるように、こちらは だいだい色 を基調にする */
+:root{
+  --bg:#f3f2ee; --card:#fff; --ink:#1c2329; --muted:#56616c; --line:#d6d3cb; --soft:#eceae4;
+  --accent:#a3470d; --accent-weak:#fbe9db;
+  --warn-ink:#8a4600; --warn-bg:#fdead2;
+  --danger-ink:#a3191f; --danger-bg:#fde2e0;
+  --ok-ink:#1e6a33; --ok-bg:#e1f1e5;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"BIZ UDPGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo","Yu Gothic UI",sans-serif;font-size:18px;line-height:1.6}
+.band{height:8px;background:var(--accent)}
+.wrap{max-width:1080px;margin:0 auto;padding:14px 16px 40px}
+h1{font-size:26px;margin:0;letter-spacing:.02em}
+.role{font-size:14px;font-weight:700;color:#fff;background:var(--accent);border-radius:6px;padding:1px 8px;margin-left:10px;white-space:nowrap;align-self:center}
+.ver{font-size:13px;color:var(--muted);margin-left:10px;white-space:nowrap}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.title{display:flex;align-items:baseline;flex:1 1 auto;flex-wrap:wrap}
+.status{margin:6px 0 12px;color:var(--muted);font-size:16px}
+.upd{color:var(--ink);background:var(--accent-weak);border-radius:6px;padding:1px 8px;font-size:17px}
+.btn{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:17px;min-height:46px;padding:8px 16px;border-radius:8px;cursor:pointer;line-height:1.3}
+.btn:hover{border-color:#a9a59b}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.big{min-height:56px;font-size:19px;padding:10px 22px}
+.btn.small{min-height:40px;font-size:16px;padding:6px 12px}
+.btn.gear{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff}
+.btn.gear svg{color:var(--muted)}
+.btn.danger{border-color:var(--danger-ink);color:var(--danger-ink);background:#fff;font-weight:700}
+.vh{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:16px}
+.panel h2{font-size:21px;margin:0 0 6px}
+.empty ol{margin:8px 0;padding-left:1.4em}
+.empty li{margin:4px 0}
+.note{color:var(--muted);font-size:16px;margin:8px 0 0}
+.notice{border-radius:10px;padding:10px 14px;margin:0 0 14px;font-size:17px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;transition:opacity .3s}
+.notice.warn{background:var(--warn-bg);color:var(--warn-ink)}
+.notice.bad{background:var(--danger-bg);color:var(--danger-ink)}
+.notice.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.notice.fade{opacity:0}
+.notice-x{appearance:none;-webkit-appearance:none;margin-left:auto;border:none;background:transparent;color:inherit;font:inherit;font-size:24px;line-height:1;min-width:44px;min-height:40px;cursor:pointer;border-radius:8px}
+/* 書き出し（検索用iPadへ渡す・バックアップ） */
+.exp{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px}
+.exp-main{flex:1 1 320px;min-width:0}
+.exp-last{margin:4px 0 0;font-size:16px;color:var(--muted)}
+.exp-last b{color:var(--ink)}
+.sec-title{font-size:21px;margin:22px 0 8px}
+.searchbox input{width:100%;font:inherit;font-size:21px;padding:12px 14px;border:2px solid #b9b5ab;border-radius:10px;background:#fff;color:var(--ink)}
+.searchbox input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.summary{margin:12px 0 10px;font-size:17px}
+.summary p{margin:4px 0}
+.hint{color:var(--muted);background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:14px 16px;margin:0}
+.res{display:grid;grid-template-columns:128px minmax(0,1fr) auto;gap:10px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;align-items:start}
+.res-date{text-align:center;border-radius:8px;padding:8px 4px;background:var(--soft)}
+.res-date .d{font-size:22px;font-weight:700;line-height:1.3}
+.res-date .wd{font-size:15px;font-weight:400}
+.res-date .rel{font-size:15px}
+.res-date.past{background:var(--warn-bg);color:var(--warn-ink)}
+.res-date.soon{background:var(--danger-bg);color:var(--danger-ink)}
+.res-name{font-size:20px;font-weight:700;line-height:1.4}
+.res-name .kana{font-size:15px;font-weight:400;color:var(--muted);margin-left:10px}
+.res-sub{font-size:16px;color:var(--muted)}
+.res-drugs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.res-drugs li{padding:2px 10px;border-radius:6px;background:#f1efea;font-size:16px}
+.more{display:block;margin:6px auto 0}
+.tag{display:inline-block;font-size:13px;padding:1px 8px;border-radius:6px;margin:1px 2px 1px 0;line-height:1.6}
+.tag.bad{background:var(--danger-bg);color:var(--danger-ink)}
+.tag.warn{background:var(--warn-bg);color:var(--warn-ink)}
+.ferr{margin:12px 0 0;padding:10px 14px;background:var(--danger-bg);color:var(--danger-ink);border-radius:10px;font-size:16px}
+.ferr ul{margin:4px 0 0;padding-left:1.3em}
+.help{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 18px}
+.help summary{cursor:pointer;font-weight:700;padding:8px 0}
+.help ul{padding-left:1.3em;margin:4px 0 12px}
+.help li{margin:6px 0}
+.foot{margin-top:18px;color:var(--muted);font-size:14px}
+.overlay{position:fixed;inset:0;background:rgba(20,25,30,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.pbox{background:#fff;border-radius:12px;padding:20px 24px;width:min(440px,90vw)}
+.pbox p{margin:0}
+.pbar{height:12px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:10px}
+.pbar div{height:100%;width:0;background:var(--accent);transition:width .15s}
+dialog{border:none;border-radius:14px;padding:0;width:min(1000px,96vw);max-height:94vh;color:var(--ink);background:#fff}
+dialog::backdrop{background:rgba(15,20,25,.5)}
+.dlg-head{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:#fff}
+.dlg-head h3{flex:1;margin:0;font-size:21px}
+.dlg-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:16px;overflow:auto;max-height:calc(94vh - 68px)}
+.dlg-photo img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+.nophoto{color:var(--muted);background:var(--soft);border-radius:8px;padding:30px 16px;text-align:center}
+.kv{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:4px 10px;margin:0 0 8px}
+.kv dt{color:var(--muted);font-size:15px;padding-top:2px}
+.kv dd{margin:0;font-size:17px;word-break:break-all}
+.dlg-info h4{margin:14px 0 6px;font-size:16px;color:var(--muted)}
+.raw{margin:0;padding:10px 12px 10px 2.2em;background:#f7f6f2;border-radius:8px;font-size:15px}
+.raw li{margin:2px 0;word-break:break-all}
+.raw .sep{color:var(--accent);font-weight:700;margin:0 .5em}
+.setdlg{width:min(660px,96vw)}
+.set-body{padding:8px 18px 18px;overflow:auto;max-height:calc(94vh - 68px)}
+.set-sec{padding:12px 0;border-bottom:1px solid var(--soft)}
+.set-sec:last-child{border-bottom:none}
+.set-sec h4{margin:0 0 6px;font-size:18px}
+.set-sec .note{margin:4px 0 10px}
+.set-status{margin:0;font-size:16px}
+.warnsec h4{color:var(--danger-ink)}
+.askdlg{width:min(580px,94vw)}
+.ask-body{padding:20px}
+.ask-body h3{margin:0 0 8px;font-size:21px}
+.ask-body .note{white-space:pre-line}
+.ask-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:18px}
+.exp-facts{margin:10px 0 0;padding:10px 14px;background:#f7f6f2;border-radius:8px;font-size:17px}
+.exp-facts b{font-size:19px}
+.exp-name{font-size:15px;color:var(--muted);word-break:break-all}
+.exp-btns{display:grid;gap:10px;margin-top:16px}
+.ck-count{margin:0 0 4px;font-size:17px;font-weight:700}
+.ck-count.ok{color:var(--ok-ink)}
+.ck-count.bad{color:var(--danger-ink)}
+.ck-list{display:grid;gap:8px;margin:10px 0 0}
+.ck-item{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-left:5px solid var(--danger-ink);border-radius:10px;padding:10px 12px;background:#fff}
+.ck-main{flex:1 1 auto;min-width:0}
+.ck-name{font-size:18px;font-weight:700;line-height:1.4}
+.ck-name .kana{font-size:15px;font-weight:400;color:var(--muted);margin-left:8px}
+.ck-sub{font-size:15px;color:var(--muted);word-break:break-all}
+.ck-item .btn{flex:0 0 auto}
+@media (max-width:700px){
+  h1{font-size:23px}
+  .res{grid-template-columns:minmax(0,1fr)}
+  .res-date{display:flex;gap:10px;align-items:baseline;text-align:left;padding:6px 10px}
+  .res-act{justify-self:start}
+  .dlg-body{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="band"></div>
+<div class="wrap">
+  <header class="top">
+    <div class="title"><h1>予製カード更新</h1><span class="role">編集用</span><span class="ver" id="ver"></span></div>
+    <!-- 取り込み・元に戻す・消去は、間違えて触らないように「設定」の中に入れる -->
+    <button class="btn gear" id="btnSettings" type="button" aria-label="設定を開く">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="6.4"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(45 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(90 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(135 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(180 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(225 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(270 12 12)"/><rect x="10.4" y="1.6" width="3.2" height="4.8" rx="0.8" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="2.7" fill="#fff"/></svg>
+      <span>設定</span>
+    </button>
+    <input id="inPdf" class="vh" type="file" accept="application/pdf,.pdf,application/zip,.zip" multiple tabindex="-1" aria-hidden="true">
+    <input id="inData" class="vh" type="file" accept="application/zip,.zip" tabindex="-1" aria-hidden="true">
+  </header>
+  <p class="status" id="status">まだカードを取り込んでいません</p>
+  <div id="notice"></div>
+
+  <section class="panel empty" id="empty">
+    <h2>はじめに：今の予製カードを取り込みます</h2>
+    <ol>
+      <li>GoodNotesで、予製カードのノートを「すべてのページ」でPDFに書き出し、このiPadの「ファイル」に保存します</li>
+      <li>右上の「設定」（歯車のマーク）を押し、「GoodNotesのPDFを取り込む」でそのPDFを選びます</li>
+      <li>取り込みが終わると、カードを確かめたり、「全部入りのファイル」を書き出したりできます</li>
+    </ol>
+    <p><button class="btn primary" type="button" id="btnOpenSettings">設定を開く</button></p>
+    <p class="note">取り込んだ内容とカードの写真は、このiPadの中に記憶します。インターネットには送信しません。</p>
+    <p class="note">以前にこのアプリで書き出した「全部入りのファイル」があるときは、設定の「書き出したファイルから元に戻す」で読み込めます。</p>
+  </section>
+
+  <div id="main" hidden>
+    <!-- 検索用iPadへ渡すファイル・バックアップ -->
+    <section class="panel">
+      <div class="exp">
+        <div class="exp-main">
+          <h2>検索用iPadへ渡す・バックアップ</h2>
+          <p class="note" style="margin-top:0">すべてのカードと写真を、1つのファイル（ZIP）にまとめて書き出します。AirDropで検索用iPadへ送る、Dropboxなどに保管する、のどちらにも同じファイルを使います。</p>
+          <p class="exp-last" id="expLast"></p>
+        </div>
+        <button class="btn primary big" type="button" id="btnExport">全部入りのファイルを書き出す</button>
+      </div>
+    </section>
+
+    <h2 class="sec-title">カードを確かめる</h2>
+    <div class="searchbox"><input id="qPatient" type="search" placeholder="氏名・ふりがな・生年月日（例：ふるかわ／550327）" autocomplete="off" enterkeyhint="search" aria-label="患者さんを探す"></div>
+    <div class="summary" id="patientSummary"></div>
+    <div class="results" id="patientResults"></div>
+  </div>
+
+  <details class="help">
+    <summary>使い方のヒント</summary>
+    <ul>
+      <li><b>この版でできること</b>：GoodNotesのPDFから今のカードを取り込む、取り込んだカードを確かめる、「全部入りのファイル」を書き出す、の3つです。カードの内容（来局予想日・薬・写真）を直す機能は、次の版で追加します。</li>
+      <li><b>全部入りのファイル</b>：すべてのカードの内容と写真を、1つのZIP（ジップ：複数のファイルを1つにまとめたもの）にしたものです。名前は「yosei-data-日付-時刻.zip」です。検索用iPadへ渡すときと、バックアップ（控え）を取るときに使います。</li>
+      <li><b>書き出しの手順</b>：「全部入りのファイルを書き出す」を押す → 準備が終わると、ファイルの大きさが出ます → 「共有する」を押すと、iPadのいつもの共有の画面が開きます。AirDropで送るときは送り先のiPadを、保管するときは「"ファイル"に保存」を選びます。</li>
+      <li><b>検索アプリで読み込むとき</b>：「全部入りのファイル」を読み込めるのは、このファイルに対応した版の予製カード検索アプリだけです。対応する前の版（v2026.11.11-6 まで）で読み込むと、検索アプリの中身が空になります（PDFを読み込み直せば戻ります）。</li>
+      <li><b>カードを確かめる</b>：氏名・ふりがな・生年月日・医療機関名で探せます。生年月日は、和暦（550327、55.3.27）でも西暦（19800327、1980.3.27）でも探せます。来局予想日（例：12/2）でも探せます。名字と名前の間のスペースは入れなくても大丈夫です。</li>
+      <li><b>来局予想日の年</b>：GoodNotesのカードには年が書かれていないため、取り込むときに、PDFを書き出した日にいちばん近い日付として年を付けます（11月に書き出したPDFの「1/25」は、翌年の1月25日）。</li>
+      <li><b>読み取り結果の確認</b>：来局予想日・氏名・薬が読み取れなかったカードや、同じ患者さんのカードが2枚あるときは、右上の「設定」の中の「読み取り結果の確認」に一覧で出ます。</li>
+      <li><b>アプリの更新</b>：新しいファイルをGitHubに上げたあと、右上の「設定」→「最新の版に更新する」を押すと、新しい版に切り替わります。取り込んだ内容はそのまま残ります。</li>
+      <li><b>気をつけること</b>：ホーム画面のこのアプリのアイコンを削除すると、中に記憶したカードも消えます。削除する前に、必ず「全部入りのファイル」を書き出して保管してください。</li>
+    </ul>
+  </details>
+  <p class="foot">取り込んだカードは、このiPadの中だけで扱います。インターネットには送信しません（外部と通信できない設定にしています）。書き出したファイルには、患者さんの氏名・生年月日・カードの写真が入っています。送り先と保管場所に気をつけてください。</p>
+</div>
+
+<div class="overlay" id="progress" hidden>
+  <div class="pbox"><p id="pText">読み込み中…</p><div class="pbar"><div id="pFill"></div></div></div>
+</div>
+
+<dialog id="setDlg" class="setdlg" aria-labelledby="setTitle">
+  <div class="dlg-head"><h3 id="setTitle">設定</h3><button class="btn small" type="button" id="setClose">閉じる</button></div>
+  <div class="set-body">
+    <section class="set-sec">
+      <h4>今のデータ</h4>
+      <p id="setStatus" class="set-status"></p>
+    </section>
+    <!-- 読み取れなかったカードの一覧（ふだんの画面には出さず、ここで確かめる） -->
+    <section class="set-sec" id="checkSec" hidden>
+      <h4>読み取り結果の確認</h4>
+      <div id="checkSummary"></div>
+      <div class="ck-list" id="checkList"></div>
+      <div id="fileErrors"></div>
+    </section>
+    <section class="set-sec" id="pdfSec">
+      <h4>最初のデータの取り込み</h4>
+      <p class="note">GoodNotesで書き出した予製カードのPDF（またはPDFをまとめたZIP）から、今のカードを取り込みます。取り込むと、このアプリの中のカードは、まるごと入れ替わります。</p>
+      <button class="btn" id="btnPdf" type="button">GoodNotesのPDFを取り込む</button>
+    </section>
+    <section class="set-sec" id="dataSec">
+      <h4>書き出したファイルから元に戻す</h4>
+      <p class="note">このアプリで書き出した「全部入りのファイル」（yosei-data-….zip）を読み込んで、そのときの内容に戻します。iPadを替えたときや、中身が消えてしまったときに使います。</p>
+      <button class="btn" id="btnData" type="button">書き出したファイルを読み込む</button>
+    </section>
+    <!-- GitHubに上げた新しいファイルに切り替える（ホーム画面のアイコンを作り直さなくてよい） -->
+    <section class="set-sec" id="updSec">
+      <h4>アプリの更新</h4>
+      <p class="set-status">今の版：<b id="setVer"></b></p>
+      <p class="note">新しいファイルをGitHubに上げたあとでこのボタンを押すと、新しい版に切り替わります。取り込んだカードと写真は、そのまま残ります。</p>
+      <button class="btn" id="btnUpdate" type="button">最新の版に更新する</button>
+    </section>
+    <section class="set-sec warnsec" id="clearSec" hidden>
+      <h4>データを消す</h4>
+      <p class="note">このiPadに記憶しているカードの内容と写真を、すべて消します。消す前に、「全部入りのファイル」を書き出して保管してあるか確かめてください。</p>
+      <button class="btn danger" id="btnClear" type="button">取り込んだ内容を消す</button>
+    </section>
+  </div>
+</dialog>
+
+<!-- 入れ替え・消去の前の確認 -->
+<dialog id="askDlg" class="askdlg" aria-labelledby="askTitle">
+  <div class="ask-body">
+    <h3 id="askTitle"></h3>
+    <p class="note" id="askText"></p>
+    <div class="ask-btns">
+      <button class="btn" type="button" id="askNo">やめる</button>
+      <button class="btn primary" type="button" id="askYes">はい</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- 書き出しの準備ができたあと、送り方を選ぶ -->
+<dialog id="expDlg" class="askdlg" aria-labelledby="expTitle">
+  <div class="ask-body">
+    <h3 id="expTitle">書き出しの準備ができました</h3>
+    <div class="exp-facts" id="expFacts"></div>
+    <p class="note" id="expNote"></p>
+    <div class="exp-btns">
+      <button class="btn primary big" type="button" id="expShare">共有する（AirDrop・"ファイル"に保存）</button>
+      <button class="btn big" type="button" id="expDown">ダウンロードする</button>
+      <button class="btn" type="button" id="expClose">閉じる</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg-head"><h3 id="dlgTitle"></h3><button class="btn small" type="button" id="dlgClose">閉じる</button></div>
+  <div class="dlg-body">
+    <div class="dlg-photo" id="dlgPhoto"></div>
+    <div class="dlg-info" id="dlgInfo"></div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+const APP_VERSION = 'v2026.11.12-1';
+
+/* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
+   出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
+   以下は出典の著作権表示とライセンス（BSD-3-Clause）です。
+Copyright 1990-2023 Adobe. All rights reserved.
+Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the
+following conditions are met:
+Redistributions of source code must retain the above
+copyright notice, this list of conditions and the following
+disclaimer.
+Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials
+provided with the distribution.
+Neither the name of Adobe nor the names of its contributors
+may be used to endorse or promote products derived from
+this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+const AJ1_PH = "\ue000";
+const AJ1_MAIN = "� !\u0022#$%&'()*+,-./0123456789:;\u003c=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[¥]^_`abcdefghijklmnopqrstuvwxyz{¦}̃’\u005c‘|~¡¢£⁄ƒ§¤“«‹›ﬁﬂ–†‡·¶•‚„”»…‰¿́̂¯̆̇̈̊¸̨̋̌—ÆªŁØŒºæıłøœß−©¬®°±²³µ¹¼½¾ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ÙÚÛÜÝÞàáâãäåçèéêëìíîïðñòóôõö÷ùúûüýþÿŠŸŽ̅š™ž0\u2002!\u0022#$%&'()*+,-./0123456789:;\u003c=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[¥]^_`abcdefghijklmnopqrstuvwxyz{￨}‾｠｡｢｣､･ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝﾞﾟ｀ヰヱヮヵヶヴガギグゲゴザジズゼゾダヂヅデドバパビピブプベペボポ｠〝〞─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿╀╁╂╃╄╅╆╇╈╉╊╋′¨‶[]〈〉《》『』【】‒｠をぁぃぅぇぉゃゅょっあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわんゐゑゎがぎぐげござじずぜぞだぢづでどばぱびぴぶぷべぺぼぽÄùéíßçÇÑñ¢£óú¡¿½ÖÜäëïöÜâêîôüàé▲á~0\u3000、。，．・：；？！゛゜´｀¨＾￣＿ヽヾゝゞ〃仝々〆〇ー―‐／＼〜‖｜…‥‘’“”（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷＝≠＜＞≦≧∞∴♂♀°′″℃￥＄￠￡％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨￢⇒⇔∀∃∠⊥⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◯０１２３４５６７８９ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψωАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя亜唖娃阿哀愛挨姶逢葵茜穐悪握渥旭葦芦鯵梓圧斡扱宛姐虻飴絢綾鮎或粟袷安庵按暗案闇鞍杏以伊位依偉囲夷委威尉惟意慰易椅為畏異移維緯胃萎衣謂違遺医井亥域育郁磯一壱溢逸稲茨芋鰯允印咽員因姻引飲淫胤蔭院陰隠韻吋右宇烏羽迂雨卯鵜窺丑碓臼渦嘘唄欝蔚鰻姥厩浦瓜閏噂云運雲荏餌叡営嬰影映曳栄永泳洩瑛盈穎頴英衛詠鋭液疫益駅悦謁越閲榎厭円園堰奄宴延怨掩援沿演炎焔煙燕猿縁艶苑薗遠鉛鴛塩於汚甥凹央奥往応押旺横欧殴王翁襖鴬鴎黄岡沖荻億屋憶臆桶牡乙俺卸恩温穏音下化仮何伽価佳加可嘉夏嫁家寡科暇果架歌河火珂禍禾稼箇花苛茄荷華菓蝦課嘩貨迦過霞蚊俄峨我牙画臥芽蛾賀雅餓駕介会解回塊壊廻快怪悔恢懐戒拐改魁晦械海灰界皆絵芥蟹開階貝凱劾外咳害崖慨概涯碍蓋街該鎧骸浬馨蛙垣柿蛎鈎劃嚇各廓拡撹格核殻獲確穫覚角赫較郭閣隔革学岳楽額顎掛笠樫橿梶鰍潟割喝恰括活渇滑葛褐轄且鰹叶椛樺鞄株兜竃蒲釜鎌噛鴨栢茅萱粥刈苅瓦乾侃冠寒刊勘勧巻喚堪姦完官寛干幹患感慣憾換敢柑桓棺款歓汗漢澗潅環甘監看竿管簡緩缶翰肝艦莞観諌貫還鑑間閑関陥韓館舘丸含岸巌玩癌眼岩翫贋雁頑顔願企伎危喜器基奇嬉寄岐希幾忌揮机旗既期棋棄機帰毅気汽畿祈季稀紀徽規記貴起軌輝飢騎鬼亀偽儀妓宜戯技擬欺犠疑祇義蟻誼議掬菊鞠吉吃喫桔橘詰砧杵黍却客脚虐逆丘久仇休及吸宮弓急救朽求汲泣灸球究窮笈級糾給旧牛去居巨拒拠挙渠虚許距鋸漁禦魚亨享京供侠僑兇競共凶協匡卿叫喬境峡強彊怯恐恭挟教橋況狂狭矯胸脅興蕎郷鏡響饗驚仰凝尭暁業局曲極玉桐粁僅勤均巾錦斤欣欽琴禁禽筋緊芹菌衿襟謹近金吟銀九倶句区狗玖矩苦躯駆駈駒具愚虞喰空偶寓遇隅串櫛釧屑屈掘窟沓靴轡窪熊隈粂栗繰桑鍬勲君薫訓群軍郡卦袈祁係傾刑兄啓圭珪型契形径恵慶慧憩掲携敬景桂渓畦稽系経継繋罫茎荊蛍計詣警軽頚鶏芸迎鯨劇戟撃激隙桁傑欠決潔穴結血訣月件倹倦健兼券剣喧圏堅嫌建憲懸拳捲検権牽犬献研硯絹県肩見謙賢軒遣鍵険顕験鹸元原厳幻弦減源玄現絃舷言諺限乎個古呼固姑孤己庫弧戸故枯湖狐糊袴股胡菰虎誇跨鈷雇顧鼓五互伍午呉吾娯後御悟梧檎瑚碁語誤護醐乞鯉交佼侯候倖光公功効勾厚口向后喉坑垢好孔孝宏工巧巷幸広庚康弘恒慌抗拘控攻昂晃更杭校梗構江洪浩港溝甲皇硬稿糠紅紘絞綱耕考肯肱腔膏航荒行衡講貢購郊酵鉱砿鋼閤降項香高鴻剛劫号合壕拷濠豪轟麹克刻告国穀酷鵠黒獄漉腰甑忽惚骨狛込此頃今困坤墾婚恨懇昏昆根梱混痕紺艮魂些佐叉唆嵯左差査沙瑳砂詐鎖裟坐座挫債催再最哉塞妻宰彩才採栽歳済災采犀砕砦祭斎細菜裁載際剤在材罪財冴坂阪堺榊肴咲崎埼碕鷺作削咋搾昨朔柵窄策索錯桜鮭笹匙冊刷察拶撮擦札殺薩雑皐鯖捌錆鮫皿晒三傘参山惨撒散桟燦珊産算纂蚕讃賛酸餐斬暫残仕仔伺使刺司史嗣四士始姉姿子屍市師志思指支孜斯施旨枝止死氏獅祉私糸紙紫肢脂至視詞詩試誌諮資賜雌飼歯事似侍児字寺慈持時次滋治爾璽痔磁示而耳自蒔辞汐鹿式識鴫竺軸宍雫七叱執失嫉室悉湿漆疾質実蔀篠偲柴芝屡蕊縞舎写射捨赦斜煮社紗者謝車遮蛇邪借勺尺杓灼爵酌釈錫若寂弱惹主取守手朱殊狩珠種腫趣酒首儒受呪寿授樹綬需囚収周宗就州修愁拾洲秀秋終繍習臭舟蒐衆襲讐蹴輯週酋酬集醜什住充十従戎柔汁渋獣縦重銃叔夙宿淑祝縮粛塾熟出術述俊峻春瞬竣舜駿准循旬楯殉淳準潤盾純巡遵醇順処初所暑曙渚庶緒署書薯藷諸助叙女序徐恕鋤除傷償勝匠升召哨商唱嘗奨妾娼宵将小少尚庄床廠彰承抄招掌捷昇昌昭晶松梢樟樵沼消渉湘焼焦照症省硝礁祥称章笑粧紹肖菖蒋蕉衝裳訟証詔詳象賞醤鉦鍾鐘障鞘上丈丞乗冗剰城場壌嬢常情擾条杖浄状畳穣蒸譲醸錠嘱埴飾拭植殖燭織職色触食蝕辱尻伸信侵唇娠寝審心慎振新晋森榛浸深申疹真神秦紳臣芯薪親診身辛進針震人仁刃塵壬尋甚尽腎訊迅陣靭笥諏須酢図厨逗吹垂帥推水炊睡粋翠衰遂酔錐錘随瑞髄崇嵩数枢趨雛据杉椙菅頗雀裾澄摺寸世瀬畝是凄制勢姓征性成政整星晴棲栖正清牲生盛精聖声製西誠誓請逝醒青静斉税脆隻席惜戚斥昔析石積籍績脊責赤跡蹟碩切拙接摂折設窃節説雪絶舌蝉仙先千占宣専尖川戦扇撰栓栴泉浅洗染潜煎煽旋穿箭線繊羨腺舛船薦詮賎践選遷銭銑閃鮮前善漸然全禅繕膳糎噌塑岨措曾曽楚狙疏疎礎祖租粗素組蘇訴阻遡鼠僧創双叢倉喪壮奏爽宋層匝惣想捜掃挿掻操早曹巣槍槽漕燥争痩相窓糟総綜聡草荘葬蒼藻装走送遭鎗霜騒像増憎臓蔵贈造促側則即息捉束測足速俗属賊族続卒袖其揃存孫尊損村遜他多太汰詑唾堕妥惰打柁舵楕陀駄騨体堆対耐岱帯待怠態戴替泰滞胎腿苔袋貸退逮隊黛鯛代台大第醍題鷹滝瀧卓啄宅托択拓沢濯琢託鐸濁諾茸凧蛸只叩但達辰奪脱巽竪辿棚谷狸鱈樽誰丹単嘆坦担探旦歎淡湛炭短端箪綻耽胆蛋誕鍛団壇弾断暖檀段男談値知地弛恥智池痴稚置致蜘遅馳築畜竹筑蓄逐秩窒茶嫡着中仲宙忠抽昼柱注虫衷註酎鋳駐樗瀦猪苧著貯丁兆凋喋寵帖帳庁弔張彫徴懲挑暢朝潮牒町眺聴脹腸蝶調諜超跳銚長頂鳥勅捗直朕沈珍賃鎮陳津墜椎槌追鎚痛通塚栂掴槻佃漬柘辻蔦綴鍔椿潰坪壷嬬紬爪吊釣鶴亭低停偵剃貞呈堤定帝底庭廷弟悌抵挺提梯汀碇禎程締艇訂諦蹄逓邸鄭釘鼎泥摘擢敵滴的笛適鏑溺哲徹撤轍迭鉄典填天展店添纏甜貼転顛点伝殿澱田電兎吐堵塗妬屠徒斗杜渡登菟賭途都鍍砥砺努度土奴怒倒党冬凍刀唐塔塘套宕島嶋悼投搭東桃梼棟盗淘湯涛灯燈当痘祷等答筒糖統到董蕩藤討謄豆踏逃透鐙陶頭騰闘働動同堂導憧撞洞瞳童胴萄道銅峠鴇匿得徳涜特督禿篤毒独読栃橡凸突椴届鳶苫寅酉瀞噸屯惇敦沌豚遁頓呑曇鈍奈那内乍凪薙謎灘捺鍋楢馴縄畷南楠軟難汝二尼弐迩匂賑肉虹廿日乳入如尿韮任妊忍認濡禰祢寧葱猫熱年念捻撚燃粘乃廼之埜嚢悩濃納能脳膿農覗蚤巴把播覇杷波派琶破婆罵芭馬俳廃拝排敗杯盃牌背肺輩配倍培媒梅楳煤狽買売賠陪這蝿秤矧萩伯剥博拍柏泊白箔粕舶薄迫曝漠爆縛莫駁麦函箱硲箸肇筈櫨幡肌畑畠八鉢溌発醗髪伐罰抜筏閥鳩噺塙蛤隼伴判半反叛帆搬斑板氾汎版犯班畔繁般藩販範釆煩頒飯挽晩番盤磐蕃蛮匪卑否妃庇彼悲扉批披斐比泌疲皮碑秘緋罷肥被誹費避非飛樋簸備尾微枇毘琵眉美鼻柊稗匹疋髭彦膝菱肘弼必畢筆逼桧姫媛紐百謬俵彪標氷漂瓢票表評豹廟描病秒苗錨鋲蒜蛭鰭品彬斌浜瀕貧賓頻敏瓶不付埠夫婦富冨布府怖扶敷斧普浮父符腐膚芙譜負賦赴阜附侮撫武舞葡蕪部封楓風葺蕗伏副復幅服福腹複覆淵弗払沸仏物鮒分吻噴墳憤扮焚奮粉糞紛雰文聞丙併兵塀幣平弊柄並蔽閉陛米頁僻壁癖碧別瞥蔑箆偏変片篇編辺返遍便勉娩弁鞭保舗鋪圃捕歩甫補輔穂募墓慕戊暮母簿菩倣俸包呆報奉宝峰峯崩庖抱捧放方朋法泡烹砲縫胞芳萌蓬蜂褒訪豊邦鋒飽鳳鵬乏亡傍剖坊妨帽忘忙房暴望某棒冒紡肪膨謀貌貿鉾防吠頬北僕卜墨撲朴牧睦穆釦勃没殆堀幌奔本翻凡盆摩磨魔麻埋妹昧枚毎哩槙幕膜枕鮪柾鱒桝亦俣又抹末沫迄侭繭麿万慢満漫蔓味未魅巳箕岬密蜜湊蓑稔脈妙粍民眠務夢無牟矛霧鵡椋婿娘冥名命明盟迷銘鳴姪牝滅免棉綿緬面麺摸模茂妄孟毛猛盲網耗蒙儲木黙目杢勿餅尤戻籾貰問悶紋門匁也冶夜爺耶野弥矢厄役約薬訳躍靖柳薮鑓愉愈油癒諭輸唯佑優勇友宥幽悠憂揖有柚湧涌猶猷由祐裕誘遊邑郵雄融夕予余与誉輿預傭幼妖容庸揚揺擁曜楊様洋溶熔用窯羊耀葉蓉要謡踊遥陽養慾抑欲沃浴翌翼淀羅螺裸来莱頼雷洛絡落酪乱卵嵐欄濫藍蘭覧利吏履李梨理璃痢裏裡里離陸律率立葎掠略劉流溜琉留硫粒隆竜龍侶慮旅虜了亮僚両凌寮料梁涼猟療瞭稜糧良諒遼量陵領力緑倫厘林淋燐琳臨輪隣鱗麟瑠塁涙累類令伶例冷励嶺怜玲礼苓鈴隷零霊麗齢暦歴列劣烈裂廉恋憐漣煉簾練聯蓮連錬呂魯櫓炉賂路露労婁廊弄朗楼榔浪漏牢狼篭老聾蝋郎六麓禄肋録論倭和話歪賄脇惑枠鷲亙亘鰐詫藁蕨椀湾碗腕弌丐丕个丱丶丼丿乂乖乘亂亅豫亊舒弍于亞亟亠亢亰亳亶从仍仄仆仂仗仞仭仟价伉佚估佛佝佗佇佶侈侏侘佻佩佰侑佯來侖儘俔俟俎俘俛俑俚俐俤俥倚倨倔倪倥倅伜俶倡倩倬俾俯們倆偃假會偕偐偈做偖偬偸傀傚傅傴傲僉僊傳僂僖僞僥僭僣僮價僵儉儁儂儖儕儔儚儡儺儷儼儻儿兀兒兌兔兢竸兩兪兮冀冂囘册冉冏冑冓冕冖冤冦冢冩冪冫决冱冲冰况冽凅凉凛几處凩凭凰凵凾刄刋刔刎刧刪刮刳刹剏剄剋剌剞剔剪剴剩剳剿剽劍劔劒剱劈劑辨辧劬劭劼劵勁勍勗勞勣勦飭勠勳勵勸勹匆匈甸匍匐匏匕匚匣匯匱匳匸區卆卅丗卉卍凖卞卩卮夘卻卷厂厖厠厦厥厮厰厶參簒雙叟曼燮叮叨叭叺吁吽呀听吭吼吮吶吩吝呎咏呵咎呟呱呷呰咒呻咀呶咄咐咆哇咢咸咥咬哄哈咨咫哂咤咾咼哘哥哦唏唔哽哮哭哺哢唹啀啣啌售啜啅啖啗唸唳啝喙喀咯喊喟啻啾喘喞單啼喃喩喇喨嗚嗅嗟嗄嗜嗤嗔嘔嗷嘖嗾嗽嘛嗹噎噐營嘴嘶嘲嘸噫噤嘯噬噪嚆嚀嚊嚠嚔嚏嚥嚮嚶嚴囂嚼囁囃囀囈囎囑囓囗囮囹圀囿圄圉圈國圍圓團圖嗇圜圦圷圸坎圻址坏坩埀垈坡坿垉垓垠垳垤垪垰埃埆埔埒埓堊埖埣堋堙堝塲堡塢塋塰毀塒堽塹墅墹墟墫墺壞墻墸墮壅壓壑壗壙壘壥壜壤壟壯壺壹壻壼壽夂夊夐夛梦夥夬夭夲夸夾竒奕奐奎奚奘奢奠奧奬奩奸妁妝佞侫妣妲姆姨姜妍姙姚娥娟娑娜娉娚婀婬婉娵娶婢婪媚媼媾嫋嫂媽嫣嫗嫦嫩嫖嫺嫻嬌嬋嬖嬲嫐嬪嬶嬾孃孅孀孑孕孚孛孥孩孰孳孵學斈孺宀它宦宸寃寇寉寔寐寤實寢寞寥寫寰寶寳尅將專對尓尠尢尨尸尹屁屆屎屓屐屏孱屬屮乢屶屹岌岑岔妛岫岻岶岼岷峅岾峇峙峩峽峺峭嶌峪崋崕崗嵜崟崛崑崔崢崚崙崘嵌嵒嵎嵋嵬嵳嵶嶇嶄嶂嶢嶝嶬嶮嶽嶐嶷嶼巉巍巓巒巖巛巫已巵帋帚帙帑帛帶帷幄幃幀幎幗幔幟幢幤幇幵并幺麼广庠廁廂廈廐廏廖廣廝廚廛廢廡廨廩廬廱廳廰廴廸廾弃弉彝彜弋弑弖弩弭弸彁彈彌彎弯彑彖彗彙彡彭彳彷徃徂彿徊很徑徇從徙徘徠徨徭徼忖忻忤忸忱忝悳忿怡恠怙怐怩怎怱怛怕怫怦怏怺恚恁恪恷恟恊恆恍恣恃恤恂恬恫恙悁悍惧悃悚悄悛悖悗悒悧悋惡悸惠惓悴忰悽惆悵惘慍愕愆惶惷愀惴惺愃愡惻惱愍愎慇愾愨愧慊愿愼愬愴愽慂慄慳慷慘慙慚慫慴慯慥慱慟慝慓慵憙憖憇憬憔憚憊憑憫憮懌懊應懷懈懃懆憺懋罹懍懦懣懶懺懴懿懽懼懾戀戈戉戍戌戔戛戞戡截戮戰戲戳扁扎扞扣扛扠扨扼抂抉找抒抓抖拔抃抔拗拑抻拏拿拆擔拈拜拌拊拂拇抛拉挌拮拱挧挂挈拯拵捐挾捍搜捏掖掎掀掫捶掣掏掉掟掵捫捩掾揩揀揆揣揉插揶揄搖搴搆搓搦搶攝搗搨搏摧摯摶摎攪撕撓撥撩撈撼據擒擅擇撻擘擂擱擧舉擠擡抬擣擯攬擶擴擲擺攀擽攘攜攅攤攣攫攴攵攷收攸畋效敖敕敍敘敞敝敲數斂斃變斛斟斫斷旃旆旁旄旌旒旛旙无旡旱杲昊昃旻杳昵昶昴昜晏晄晉晁晞晝晤晧晨晟晢晰暃暈暎暉暄暘暝曁暹曉暾暼曄暸曖曚曠昿曦曩曰曵曷朏朖朞朦朧霸朮朿朶杁朸朷杆杞杠杙杣杤枉杰枩杼杪枌枋枦枡枅枷柯枴柬枳柩枸柤柞柝柢柮枹柎柆柧檜栞框栩桀桍栲桎梳栫桙档桷桿梟梏梭梔條梛梃檮梹桴梵梠梺椏梍桾椁棊椈棘椢椦棡椌棍棔棧棕椶椒椄棗棣椥棹棠棯椨椪椚椣椡棆楹楷楜楸楫楔楾楮椹楴椽楙椰楡楞楝榁楪榲榮槐榿槁槓榾槎寨槊槝榻槃榧樮榑榠榜榕榴槞槨樂樛槿權槹槲槧樅榱樞槭樔槫樊樒櫁樣樓橄樌橲樶橸橇橢橙橦橈樸樢檐檍檠檄檢檣檗蘗檻櫃櫂檸檳檬櫞櫑櫟檪櫚櫪櫻欅蘖櫺欒欖鬱欟欸欷盜欹飮歇歃歉歐歙歔歛歟歡歸歹歿殀殄殃殍殘殕殞殤殪殫殯殲殱殳殷殼毆毋毓毟毬毫毳毯麾氈氓气氛氤氣汞汕汢汪沂沍沚沁沛汾汨汳沒沐泄泱泓沽泗泅泝沮沱沾沺泛泯泙泪洟衍洶洫洽洸洙洵洳洒洌浣涓浤浚浹浙涎涕濤涅淹渕渊涵淇淦涸淆淬淞淌淨淒淅淺淙淤淕淪淮渭湮渮渙湲湟渾渣湫渫湶湍渟湃渺湎渤滿渝游溂溪溘滉溷滓溽溯滄溲滔滕溏溥滂溟潁漑灌滬滸滾漿滲漱滯漲滌漾漓滷澆潺潸澁澀潯潛濳潭澂潼潘澎澑濂潦澳澣澡澤澹濆澪濟濕濬濔濘濱濮濛瀉瀋濺瀑瀁瀏濾瀛瀚潴瀝瀘瀟瀰瀾瀲灑灣炙炒炯烱炬炸炳炮烟烋烝烙焉烽焜焙煥煕熈煦煢煌煖煬熏燻熄熕熨熬燗熹熾燒燉燔燎燠燬燧燵燼燹燿爍爐爛爨爭爬爰爲爻爼爿牀牆牋牘牴牾犂犁犇犒犖犢犧犹犲狃狆狄狎狒狢狠狡狹狷倏猗猊猜猖猝猴猯猩猥猾獎獏默獗獪獨獰獸獵獻獺珈玳珎玻珀珥珮珞璢琅瑯琥珸琲琺瑕琿瑟瑙瑁瑜瑩瑰瑣瑪瑶瑾璋璞璧瓊瓏瓔珱瓠瓣瓧瓩瓮瓲瓰瓱瓸瓷甄甃甅甌甎甍甕甓甞甦甬甼畄畍畊畉畛畆畚畩畤畧畫畭畸當疆疇畴疊疉疂疔疚疝疥疣痂疳痃疵疽疸疼疱痍痊痒痙痣痞痾痿痼瘁痰痺痲痳瘋瘍瘉瘟瘧瘠瘡瘢瘤瘴瘰瘻癇癈癆癜癘癡癢癨癩癪癧癬癰癲癶癸發皀皃皈皋皎皖皓皙皚皰皴皸皹皺盂盍盖盒盞盡盥盧盪蘯盻眈眇眄眩眤眞眥眦眛眷眸睇睚睨睫睛睥睿睾睹瞎瞋瞑瞠瞞瞰瞶瞹瞿瞼瞽瞻矇矍矗矚矜矣矮矼砌砒礦砠礪硅碎硴碆硼碚碌碣碵碪碯磑磆磋磔碾碼磅磊磬磧磚磽磴礇礒礑礙礬礫祀祠祗祟祚祕祓祺祿禊禝禧齋禪禮禳禹禺秉秕秧秬秡秣稈稍稘稙稠稟禀稱稻稾稷穃穗穉穡穢穩龝穰穹穽窈窗窕窘窖窩竈窰窶竅竄窿邃竇竊竍竏竕竓站竚竝竡竢竦竭竰笂笏笊笆笳笘笙笞笵笨笶筐筺笄筍笋筌筅筵筥筴筧筰筱筬筮箝箘箟箍箜箚箋箒箏筝箙篋篁篌篏箴篆篝篩簑簔篦篥籠簀簇簓篳篷簗簍篶簣簧簪簟簷簫簽籌籃籔籏籀籐籘籟籤籖籥籬籵粃粐粤粭粢粫粡粨粳粲粱粮粹粽糀糅糂糘糒糜糢鬻糯糲糴糶糺紆紂紜紕紊絅絋紮紲紿紵絆絳絖絎絲絨絮絏絣經綉絛綏絽綛綺綮綣綵緇綽綫總綢綯緜綸綟綰緘緝緤緞緻緲緡縅縊縣縡縒縱縟縉縋縢繆繦縻縵縹繃縷縲縺繧繝繖繞繙繚繹繪繩繼繻纃緕繽辮繿纈纉續纒纐纓纔纖纎纛纜缸缺罅罌罍罎罐网罕罔罘罟罠罨罩罧罸羂羆羃羈羇羌羔羞羝羚羣羯羲羹羮羶羸譱翅翆翊翕翔翡翦翩翳翹飜耆耄耋耒耘耙耜耡耨耿耻聊聆聒聘聚聟聢聨聳聲聰聶聹聽聿肄肆肅肛肓肚肭冐肬胛胥胙胝胄胚胖脉胯胱脛脩脣脯腋隋腆脾腓腑胼腱腮腥腦腴膃膈膊膀膂膠膕膤膣腟膓膩膰膵膾膸膽臀臂膺臉臍臑臙臘臈臚臟臠臧臺臻臾舁舂舅與舊舍舐舖舩舫舸舳艀艙艘艝艚艟艤艢艨艪艫舮艱艷艸艾芍芒芫芟芻芬苡苣苟苒苴苳苺莓范苻苹苞茆苜茉苙茵茴茖茲茱荀茹荐荅茯茫茗茘莅莚莪莟莢莖茣莎莇莊荼莵荳荵莠莉莨菴萓菫菎菽萃菘萋菁菷萇菠菲萍萢萠莽萸蔆菻葭萪萼蕚蒄葷葫蒭葮蒂葩葆萬葯葹萵蓊葢蒹蒿蒟蓙蓍蒻蓚蓐蓁蓆蓖蒡蔡蓿蓴蔗蔘蔬蔟蔕蔔蓼蕀蕣蕘蕈蕁蘂蕋蕕薀薤薈薑薊薨蕭薔薛藪薇薜蕷蕾薐藉薺藏薹藐藕藝藥藜藹蘊蘓蘋藾藺蘆蘢蘚蘰蘿虍乕虔號虧虱蚓蚣蚩蚪蚋蚌蚶蚯蛄蛆蚰蛉蠣蚫蛔蛞蛩蛬蛟蛛蛯蜒蜆蜈蜀蜃蛻蜑蜉蜍蛹蜊蜴蜿蜷蜻蜥蜩蜚蝠蝟蝸蝌蝎蝴蝗蝨蝮蝙蝓蝣蝪蠅螢螟螂螯蟋螽蟀蟐雖螫蟄螳蟇蟆螻蟯蟲蟠蠏蠍蟾蟶蟷蠎蟒蠑蠖蠕蠢蠡蠱蠶蠹蠧蠻衄衂衒衙衞衢衫袁衾袞衵衽袵衲袂袗袒袮袙袢袍袤袰袿袱裃裄裔裘裙裝裹褂裼裴裨裲褄褌褊褓襃褞褥褪褫襁襄褻褶褸襌褝襠襞襦襤襭襪襯襴襷襾覃覈覊覓覘覡覩覦覬覯覲覺覽覿觀觚觜觝觧觴觸訃訖訐訌訛訝訥訶詁詛詒詆詈詼詭詬詢誅誂誄誨誡誑誥誦誚誣諄諍諂諚諫諳諧諤諱謔諠諢諷諞諛謌謇謚諡謖謐謗謠謳鞫謦謫謾謨譁譌譏譎證譖譛譚譫譟譬譯譴譽讀讌讎讒讓讖讙讚谺豁谿豈豌豎豐豕豢豬豸豺貂貉貅貊貍貎貔豼貘戝貭貪貽貲貳貮貶賈賁賤賣賚賽賺賻贄贅贊贇贏贍贐齎贓賍贔贖赧赭赱赳趁趙跂趾趺跏跚跖跌跛跋跪跫跟跣跼踈踉跿踝踞踐踟蹂踵踰踴蹊蹇蹉蹌蹐蹈蹙蹤蹠踪蹣蹕蹶蹲蹼躁躇躅躄躋躊躓躑躔躙躪躡躬躰軆躱躾軅軈軋軛軣軼軻軫軾輊輅輕輒輙輓輜輟輛輌輦輳輻輹轅轂輾轌轉轆轎轗轜轢轣轤辜辟辣辭辯辷迚迥迢迪迯邇迴逅迹迺逑逕逡逍逞逖逋逧逶逵逹迸遏遐遑遒逎遉逾遖遘遞遨遯遶隨遲邂遽邁邀邊邉邏邨邯邱邵郢郤扈郛鄂鄒鄙鄲鄰酊酖酘酣酥酩酳酲醋醉醂醢醫醯醪醵醴醺釀釁釉釋釐釖釟釡釛釼釵釶鈞釿鈔鈬鈕鈑鉞鉗鉅鉉鉤鉈銕鈿鉋鉐銜銖銓銛鉚鋏銹銷鋩錏鋺鍄錮錙錢錚錣錺錵錻鍜鍠鍼鍮鍖鎰鎬鎭鎔鎹鏖鏗鏨鏥鏘鏃鏝鏐鏈鏤鐚鐔鐓鐃鐇鐐鐶鐫鐵鐡鐺鑁鑒鑄鑛鑠鑢鑞鑪鈩鑰鑵鑷鑽鑚鑼鑾钁鑿閂閇閊閔閖閘閙閠閨閧閭閼閻閹閾闊濶闃闍闌闕闔闖關闡闥闢阡阨阮阯陂陌陏陋陷陜陞陝陟陦陲陬隍隘隕隗險隧隱隲隰隴隶隸隹雎雋雉雍襍雜霍雕雹霄霆霈霓霎霑霏霖霙霤霪霰霹霽霾靄靆靈靂靉靜靠靤靦靨勒靫靱靹鞅靼鞁靺鞆鞋鞏鞐鞜鞨鞦鞣鞳鞴韃韆韈韋韜韭齏韲竟韶韵頏頌頸頤頡頷頽顆顏顋顫顯顰顱顴顳颪颯颱颶飄飃飆飩飫餃餉餒餔餘餡餝餞餤餠餬餮餽餾饂饉饅饐饋饑饒饌饕馗馘馥馭馮馼駟駛駝駘駑駭駮駱駲駻駸騁騏騅駢騙騫騷驅驂驀驃騾驕驍驛驗驟驢驥驤驩驫驪骭骰骼髀髏髑髓體髞髟髢髣髦髯髫髮髴髱髷髻鬆鬘鬚鬟鬢鬣鬥鬧鬨鬩鬪鬮鬯鬲魄魃魏魍魎魑魘魴鮓鮃鮑鮖鮗鮟鮠鮨鮴鯀鯊鮹鯆鯏鯑鯒鯣鯢鯤鯔鯡鰺鯲鯱鯰鰕鰔鰉鰓鰌鰆鰈鰒鰊鰄鰮鰛鰥鰤鰡鰰鱇鰲鱆鰾鱚鱠鱧鱶鱸鳧鳬鳰鴉鴈鳫鴃鴆鴪鴦鶯鴣鴟鵄鴕鴒鵁鴿鴾鵆鵈鵝鵞鵤鵑鵐鵙鵲鶉鶇鶫鵯鵺鶚鶤鶩鶲鷄鷁鶻鶸鶺鷆鷏鷂鷙鷓鷸鷦鷭鷯鷽鸚鸛鸞鹵鹹鹽麁麈麋麌麒麕麑麝麥麩麸麪麭靡黌黎黏黐黔黜點黝黠黥黨黯黴黶黷黹黻黼黽鼇鼈皷鼕鼡鼬鼾齊齒齔齣齟齠齡齦齧齬齪齷齲齶龕龜龠堯槇遙瑤♂─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿╀╁╂╃╄╅╆╇╈╉╊╋①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ㍉㌔㌢㍍㌘㌧㌃㌶㍑㍗㌍㌦㌣㌫㍊㌻㎜㎝㎞㎎㎏㏄㎡〝〟№㏍℡㊤㊥㊦㊧㊨㈱㈲㈹㍾㍽㍼∮∑√⊥∠∟⊿∩∪啞飴溢鰯淫迂欝厩\ue000噂餌焰襖鷗迦恢拐晦喝葛鞄嚙㵎翰翫徽祇俠卿僅軀喰櫛屑靴祁慧\ue000繫荆\ue000倦嫌捲鹼諺巷昻溝麴鵠甑采榊栅薩鯖錆珊叱屢遮杓灼繡酋曙渚薯藷哨廠梢蔣醬鞘蝕靱逗翠摺逝蟬撰栓煎煽詮噌遡創搔瘦遜驒腿黛啄濯琢蛸\ue000辿棚鱈樽簞註瀦凋捗槌鎚塚摑鄭擢溺塡顚堵屠菟賭塘禱鴇瀆瀞噸遁頓那謎灘楢禰囊牌這秤剝箸潑醱挽扉樋柊稗逼媛謬廟瀕頻蔽瞥娩庖泡蓬頰鱒麵儲餅籾鑓愈癒猷熔耀萊遼漣煉蓮榔蠟\ue000冉\ue000冤唹唳嗤嘲嚥堋媾\ue000屛幤悗捩搆攢斃枦柺梛梎湮\ue000\ue000珎甄甍甕皓硼稱龝箙粐粮綛綮綟翔舮芍苒茣荵蔗蔾螂蟒褊覯諞譁跚踉輓迪迩遘扈釁閻睢霤靠靭頤鬮鮗鯲麪龜、。‾＿ー―‐〜‖｜…‥（）〔〕［］｛｝〈〉《》「」『』【】＝ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ㍉㌔㌢㍍㌘㌧㌃㌶㍑㍗㌍㌦㌣㌫㍊㌻〝〞ゔゕゖ芦茨噓厩牙汲笈饗拳餐靭煽穿箭揃菟祢叛篇迄簾僊匕喩嚮堙夛尨廐廏扁曁氈渣滬窗篝翩萢蝙蠎蟒騙麭￤＇＂ᆨ◁▷⇩⇧⇦⇨▢♧♡♤♢㎠㎢㎤㎥㎗ℓ㎘㎳㎲㎱㎰㎅㎆㎇㏋㎐㏔㎖㌢㌖㌘㌕㌃㌣㍗㍂㌹㌻㌀㌱㍇㌞㌪㏍㍿℡☎〶〠©®\ue000⒈⒉⒊⒋⒌⒍⒎⒏⒐⑴⑵⑶⑷⑸⑹⑺⑻⑼⑽⑾⑿⒀⒁⒂⒃⒄⒅⒆⒇㉑ⅰⅱⅲⅳⅴⅵⅶⅷⅸⅹ㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛⒜⒝⒞⒟⒠⒡⒢⒣⒤⒥⒦⒧⒨⒩⒪⒫⒬⒭⒮⒯⒰⒱⒲⒳⒴⒵㉃㈽㈿㈴㈸㈳㈼㉂㈾㈶㈵㈻㉀㈺㊰㊭㊩㊯㊔㊪㊘㊫㊒㊑㊓㊬㊮㊖⎩⎨⎧︸⎭⎬⎫︸⎫⎬⎭︸⎧⎨⎩︸㏌㌅½¼㎟㎣㎦\ue000\ue000㊞㎈㎉㏈∭印㈰㈪㈫㈬㈭㈮㈯㈷㉁➡⬅⬆⬇◉♠♥♣♦☀☁☂☃☞☜☝☟㊙⓪ⅪⅫ００\u3000▁▂▃▄▅▆▇█▏▎▍▌▋▊▉▔▕╭╮╰╯═╞╪╡◢◣◥◤●໐╱╲╳ゕゖ逢辻，°〓゜゛′．‘’“”“„‘‚″凜熙❶❷❸❹❺❻❼❽❾\ue000\ue000\ue000ⅺⅻ\ue000\ue000\ue000ⅿℊ℉\ue000℻〄⇆⇄⇅⇵ヷヸヹヺ大小㊝控\ue000\ue000㍻㍿\ue000\ue000㌳㍎㌢㌖㌅㌅㌅㌳㍎㍎㍎㌃㌘㌕㌹㌹㌹㍗㍂㍂㍂㌣㌻㌀㌞㌞㌞㌪㌪㌪㍇㌱纊褜鍈銈蓜俉炻昱棈鋹曻彅丨仡仼伀伃伹佖侒侊侚侔俍偀倢俿倞偆偰偂傔僴僘兊兤冝冾凬刕劜劦勀勛匀匇匤卲厓厲叝﨎咜咊咩哿喆坙坥垬埈埇﨏塚增墲夋奓奛奝奣妤妺孖寀甯寘寛尞岦岺峵崧嵓﨑嵂嵭嶸嶹巐弡弴彧德忞恝悅悊惞惕愠惲愑愷愰憘戓抦揵摠撝擎敎昀昕昉昮昞昤晥晗晙晴晳暙暠暲暿曺朎朗杦枻桒柀栁桄棏﨓楨﨔榘槢樰橫橆橳橾櫢櫤毖氿汜沆汯泚洄涇浯涖涬淏淸淲淼渹湜渧渼溿澈澵濵瀅瀇瀨炅炫焏焄煜煆煇凞燁燾犱犾猤猪獷玽珉珖珣珒琇珵琦琪琩琮瑢璉璟甁畯皂皜皞皛皦益睆劯砡硎硤硺礰礼神祥禔福禛竑竧靖竫箞精絈絜綷綠緖繒罇羡羽茁荢荿菇菶葈蒴蕓蕙蕫﨟薰蘒﨡蠇裵訒訷詹誧誾諟諸諶譓譿賰賴贒赶﨣軏﨤逸遧郞都鄕鄧釚釗釞釭釮釤釥鈆鈐鈊鈺鉀鈼鉎鉙鉑鈹鉧銧鉷鉸鋧鋗鋙鋐﨧鋕鋠鋓錥錡鋻﨨錞鋿錝錂鍰鍗鎤鏆鏞鏸鐱鑅鑈閒隆﨩隝隯霳霻靃靍靏靑靕顗顥飯飼餧館馞驎髙髜魵魲鮏鮱鮻鰀鵰鵫鶴鸙黑¬\u005c !\u0022#$%&'()*+,-./0123456789:;\u003c=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[¥]^_`abcdefghijklmnopqrstuvwxyz{¦}̃’\u005c‘|~¡¢£⁄ƒ§¤“«‹›ﬁﬂ–†‡·¶•‚„”»…‰¿́̂¯̆̇̈̊¸̨̋̌—ÆªŁØŒºæıłøœß−©¬®°±²³µ¹¼½¾ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ÙÚÛÜÝÞàáâãäåçèéêëìíîïðñòóôõö÷ùúûüýþÿŠŸŽ̅š™ž0\u2002!\u0022#$%&'()*+,-./0123456789:;\u003c=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[¥]^_`abcdefghijklmnopqrstuvwxyz{￨}‾｀′¨‶ÄùéíßçÇÑñ¢£óú¡¿½ÖÜäëïöÜâêîôüàéá~0¬\u005c｠｡｢｣､･ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝﾞﾟヰヱヮヵヶヴガギグゲゴザジズゼゾダヂヅデドバパビピブプベペボポ｠をぁぃぅぇぉゃゅょっあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわんゐゑゎがぎぐげござじずぜぞだぢづでどばぱびぴぶぷべぺぼぽ〝〞[]〈〉《》『』【】‒｠─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿╀╁╂╃╄╅╆╇╈╉╊╋▲€Ω′″ﬀﬃﬄāīūēōĀĪŪĒŌ⅛⅜⅝⅞⅓⅔⁰⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉ǍĚ\ue000ẼǏ\ue000ĨǑ\ue000ǓŮŨǎě\ue000ẽǐ\ue000ĩǒ\ue000ǔůũɑάὰǽæɔɔɔəəəɚɚɚɛέὲȷŋɵʌʌʌʒʃː !\u0022#$%&'()*+,-./0123456789:;\u003c=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[¥]^_`abcdefghijklmnopqrstuvwxyz{¦}̃’\u005c‘|~¡¢£⁄ƒ§¤“«‹›ﬁﬂ–†‡·¶•‚„”»…‰¿́̂¯̆̇̈̊¸̨̋̌—ÆªŁØŒºæıłøœß−©¬®°±²³µ¹¼½¾ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ÙÚÛÜÝÞàáâãäåçèéêëìíîïðñòóôõö÷ùúûüýþÿŠŸŽ̅š™ž0€Ω′″ﬀﬃﬄāīūēōĀĪŪĒŌ⅛⅜⅝⅞⅓⅔⁰⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉ǍĚ\ue000ẼǏ\ue000ĨǑ\ue000ǓŮŨǎě\ue000ẽǐ\ue000ĩǒ\ue000ǔůũ0123456789—-=,()./:;0123456789—-=,()./:;·€↉⅓⅔¾⅕⅖⅗⅘⅙⅚⅐\ue000\ue000\ue000\ue000\ue000⅛⅜⅝⅞⅑\ue000\ue000\ue000\ue000\ue000⅒\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue00001234567890Ⅳ\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ⅰⅱⅲⅳⅴⅵⅶⅷⅸⅹⅺⅻ\ue000\ue000\ue000ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000営合泫問答例01234567890123456789つ才〇一二三四五六七八九十〇一二三四五六七八九十〇一二三四五六七八九つ才一二三四五六七八九十〇一二三四五六七八九十コつツ才\ue000\ue000①②③④⑤⑥⑦⑧⑨㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをん㋐㋑㋒㋓㋔㋕㋖㋗㋘㋙㋚㋛㋜㋝㋞㋟㋠㋡㋢㋣㋤㋥㋦㋧㋨㋩㋪㋫㋬㋭㋮㋯㋰㋱㋲㋳㋴㋵㋶㋷㋸㋹㋺㋻㋼㋽㋾ン㊀㊁㊂㊃㊄㊅㊆㊇㊈㊉㊐㊊㊋㊌㊍㊎㊏調㊟副減標欠基禁㊠㊡㊛㊚㊣㊢㊗出㊜㊕済増㉄答例電◌⓿\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000❿⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000abcdefghijklmnopqrstuvwxyz\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン日月火水木金土問答例●0\ue0001\ue0002\ue0003\ue0004\ue0005\ue0006\ue0007\ue0008\ue0009\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000abcdefghijklmnopqrstuvwxyz\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんアイウエオカキクケコ\ue000シスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン日\ue000火水木金土負勝問答例⃞⬚0\ue0001\ue0002\ue0003\ue0004\ue0005\ue0006\ue0007\ue0008\ue0009\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン日月火水木金土問答例■0\ue0001\ue0002\ue0003\ue0004\ue0005\ue0006\ue0007\ue0008\ue0009\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン日月火水木金土問答例0\ue0001\ue0002\ue0003\ue0004\ue0005\ue0006\ue0007\ue0008\ue0009\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000abcdefghijklmnopqrstuvwxyz\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン日月火水木金土問答例■㏂㏍№\ue000㏘㏚℡™\ue000℀㏂\ue000㏄℅㎗㍱㎘ℓ㎍㎛㎖\ue000\ue000㏗㏘\ue000\ue000\ue000㌁㌂㌄㌆\ue000㌈\ue000㌇㌊\ue000㌉\ue000㌋\ue000㌌㌎㌏㌐㌑㌒㌓\ue000㌗\ue000㌙\ue000㌚㌛㌜㌝㌟㌠㌡㌤\ue000㌥\ue000\ue000㌨㌩\ue000㌭\ue000\ue000㌮㌯㌰㌲\ue000\ue000㌴㌵㌼\ue000\ue000\ue000㌷\ue000㌸㌺㌽㍁㌾㌿㍀㍃㍄㍅㍆㍈㍋㍌㍏㍐\ue000\ue000㍒㍔\ue000\ue000㍓㍕㍖\ue000㌁㌂㌄㌆\ue000㌈\ue000㌇㌊\ue000㌉\ue000㌋\ue000㌌㌎㌏㌐㌑㌒㌓\ue000㌗\ue000㌙\ue000㌚㌛㌜㌝㌟㌠㌡㌤\ue000㌥\ue000\ue000㌨㌩\ue000㌭\ue000\ue000㌮㌯㌰㌲\ue000\ue000㌴㌵㌼\ue000\ue000\ue000㌷\ue000㌸㌺㌽㍁㌾㌿㍀㍃㍄㍅㍆㍈㍋㍌㍏㍐\ue000\ue000㍒㍔\ue000\ue000㍓㍕㍖㍾㍽㍼㍻\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000-=℃♀♂〓〒「」『』〚〛〘〙（）〝〞‘’“”'\u0022\ue000ℵϐ∊ℏµϕϛϑ⚾♨♩♬：©©®®〻〻〳〴〵‼⁉!‼⁉⑊\ue000∓≠≃≲≳「」『』〚〛〘〙｟｠「」『』〚〛〘〙｟｠⎛⎝⎞⎠⎝⎛⎠⎞⎡⎣⎤⎦⎣⎡⎦⎤⎡⎣⎤⎦⎣⎡⎦⎤｜―〝〞‘’‘’✂✂✂✂〽〒ゟ࿖∇∅⊠⊖⊘⊕⊗⊞⊕⚠△◀▶⇦⇨⇧⇩⇐↔↘↙↖↗⇌⇋⮂⮃⭠⭢⭡⭣⭤⭥┄┆〰⌇〰⌇〰⌇〰⌇〰⌇❀✿□■□⛋□□◻▫◼▪✚✚◇◆◇◇◇⬦⋄⬥⬩◎◉⚪◦⚫•❖❖❖❖〈〉〈〉《》《》\ue000\ue000\ue000\ue000ゝゞぁあぃいぅうぇえぉおゕかがきぎくぐゖけげ\ue000こごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔヽヾーァアィイゥウェエォオヵカガキギクグヶケゲ\ue000コゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヷヸヹヺゝゞぁあぃいぅうぇえぉおゕかがきぎくぐゖけげ\ue000こごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔヽヾーァアィイゥウェエォオヵカガキギクグヶケゲ\ue000コゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヷヸヹヺ﹅﹆・＊※○◎◉△▲ヽヾゝゞ（）〔〕（）〔〕0123456789ぁあぃいぅうぇえぉおかゕがきぎくぐけゖげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔぁぃぅぇぉかけっゃゅょゎァアィイゥウェエォオカヵガキギクグケヶゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴァィゥェォヵヶッャュョヮーー注€Ω′″ﬀﬃﬄāīūēōĀĪŪĒŌ⅛⅜⅝⅞⅓⅔⁰⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉ǍĚ\ue000ẼǏ\ue000ĨǑ\ue000ǓŮŨǎě\ue000ẽǐ\ue000ĩǒ\ue000ǔůũɑɑɑǽæɔɔɔəəəɚɚɚɛɛɛjŋɵʌʌʌʒʃː !\u0022#$%&'()*+,-./0123456789:;\u003c=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[¥]^_`abcdefghijklmnopqrstuvwxyz{¦}̃’\u005c‘|~¡¢£⁄ƒ§¤“«‹›ﬁﬂ–†‡·¶•‚„”»…‰¿́̂¯̆̇̈̊¸̨̋̌—ÆªŁØŒºæıłøœß−©¬®°±²³µ¹¼½¾ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ÙÚÛÜÝÞàáâãäåçèéêëìíîïðñòóôõö÷ùúûüýþÿŠŸŽ̅š™ž0€Ω′″ﬀﬃﬄāīūēōĀĪŪĒŌ⅛⅜⅝⅞⅓⅔⁰⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉ǍĚ\ue000ẼǏ\ue000ĨǑ\ue000ǓŮŨǎě\ue000ẽǐ\ue000ĩǒ\ue000ǔůũ0123456789—-=,()./:;0123456789—-=,()./:;·-=℃♀♂〓〒「」『』〚〛〘〙（）〝〞‘’“”'\u0022逸謁緣黃溫禍悔海慨槪渴褐漢器既祈虛響勤謹揭擊硏穀殺祉視煮社者臭祝暑署涉狀慎\ue000節祖僧層巢憎贈卽嘆著徵懲鎮禎鬭突難梅繁晚卑碑賓敏侮併塀勉步墨每免戾祐欄隆虜淚類曆歷練鍊廊錄概冴捌蛛邉逢偉緯違厩餌衛延沿鉛翁芽雅害慨概殻敢貫巌頑帰軌窮均傑穴健建鈷檎交公更校硬絞考購降拷罪使史姉謝邪収輯柔瞬舜楯松訟丈埴植職親遂据摂船総聡像誕恥兆眺聴跳庭廷艇桃逃派排輩班頒悲扉斐緋誹貧父葺分噴憤粉紛雰蔽便捧盆桝脈耶翼吏隣麟麗聯聾湾傅冓凛\ue000區雙喩囁圍墫姚娶媾嵎嶇巉巓弭徘惘愽懾扨拏攝搏擲敝晟枩柧楫椰榧橄檐氈氓渣漑滾漾燿珥琲瑟瓠甌癲礪磔禺稙窕糲絳緝縵羮翡聚聟聳聰聶腓膊膵臍菲蕕藕蜚蠶袞裘裴褫褻襪襯訝贅贏齎躑躡遒逎鄰酖酘酥酳酲醢醯醪醴醺鑷隘霽靠靱頌顳飃驅魍魘鯆鯡鯱鵈鷏鼈扱暗意衣違遺磯貟⻗\ue000厩瓜運餌\ue000銳閱延援\ue000煙遠鉛於往翁卸音化花菓貨過\ue000雅餓廻灰害慨慨慨\ue000概杮⻆隔\ue000轄鎌苅寒環緩\ue000還閒韓舘危㐂㐂㐂幾旣期機起飢\ue000喫虐逆及吸急級巨拒距\ue000\ue000\ue000强恐槁\ue000\ue000郷響饗暁⺩近俱矩具虞空遇櫛啓契恵慧迎傑潔穴月⺼兼券\ue000权肩謙遣\ue000訁戶雇顧吳娛誤工慌抅控構\ue000港耕腔荒講購吿酷腰甑込\ue000鎖\ue000彩採歲菜冴咲削產䬸姿姿巿諮諮資資次次\ue000玺\ue000捨斜邪\ue000爵\ue000酌弱主受授\ue000終習衆週住術述巡遵遵所書女勝商宵\ue000⺌\ue000尙消硝肖\ue000宂\ue000情埴飾植殖⻝飠\ue000㞍侵㣺浸\ue000進亻\ue000刃尋訊訊迅\ue000遂㔟\ue000\ue000盛聖覀誠請靜靜稅脆隻籍節說雪絕扇澘羡船選遷前全掃揷瘦走送遭造\ue000速賊尊尊妥\ue000退逮隊鯛大㐧瀧逹脫丹歎\ue000誕暖値置築\ue000筑逐柱注駐\ue000徵懲朝\ue000調直朕朕墜追通坪釣呈帝程的適迭添兎途砺圡\ue000\ue000唐糖藤謄逃透騰導道吞㮈內肉乳忍認寧納覇派肺博薄迫縛肇丷潑醱伴判半帆畔晩蕃避微鼻匹\ue000彥姬\ue000評庙病婦敷浮負負服覆丙幣平弊蔑偏編返遍簿包崩抱朋砲縫胞萌邦邦飽鵬亡帽忘忙房望望冒摩翻凡磨魔麻槙桝㑨龴繭麿脈明盟迷妄勐盲耗戻紋门約躍\ue000桺栁愉\ue000\ue000勇有猶猶猷\ue000遊曜⺷要養翌翼躶蘭率龍龍旅鿄燐隣鱗麟类廉憐連朗耂\ue000僊儚兔冕\ue000劍勗\ue000\ue000㔾叟曼唳嗤呕囀夹娜嫂孶\ue000尔㟢峦幔么廣悗\ue000拌搜揆搨\ue000挛晟晟晣曵\ue000條梍槶榆\ue000寨榻毌漑渗澘沪沪瀛煢爻丬猜瓊瓯畵痬癎㾱睪瞩祀鿆祓齋禮邃筓\ue000簔䉤籐籘絆\ue000縢縢繈縵繃續\ue000\ue000\ue000\ue000翅翆翩腁䑓艘艹艹艹苣兹荚萠莽蓴䔥薇藴\ue000蜷蜻蠅螽虽蠶㐮裆覽諛謾譚赳趙䟦踴\ue000迯邇迺逞逵遐迈邁邊邊邊邊邊邊邉邉邉邉邉邉邉邉邉邉邉邉\ue000鏝閼\ue000隲静頹飫餃餉饅饅饋騈驟驥髯鬘鯟鴉鴈麥黌鼈齊\ue000齧\ue000\ue000\ue000褜棈曻彅匀厉奓﨑\ue000橳\ue000\ue000訒丄丅丟丫丯丰乀乁乄乚乿亍亖亹仐仠份仿伋伕你伻佉佔佺佽佾侗侾俏俽倀倁倐倛倧倮偗偦偪倻傏傖傜僌僦僩僯儈儋儐儛儞兟冡冼凞凮凴刁刂刓剉剡剦劓勈勰匊匋匾卌卋卡卬厫叚另叵吧呍呦呫呴咍咖咡咭咹咿哆响唎唫唵啊啠啡喈喎嘈嘎嘏嘷嘿噉噋噏噦噩噯噱噲嚕嚚嚬嚭嚱囉囝囤圊圕圣圯圳圴坌坰垌垜垸埦埭埵埶埿堉堠堲塼墀墩壎壐壔壚壩夌夤夯奡奭姊姒姝姣姤娄娌娣婇婕婣婭婾媞媧媬媳嫠嬀嬙嬥嬭孁孼孾孿宊尣尫尰屣屩屼峋峒峴崤崦嵃嵆嵊嶒嶔嶙嶠巘巠巸帀帒帔帕帘帮幘幫幬庨庪庾庿廋廒弇弎弜弝弢弨弶弻彀彐彘彤徉徜徧徤徯徸忄忉忡忩忭忼怗怚怳恡恿悞悤悰惋惛惸愒愓愔愜慼憍憟憨懂懟戕戩扃扆扌扑扖拄拼挊挍挘挹捂捃捥捴捽掄掇掐掞揑揜搉搐搢摔摛摭摻撾撿擥擷擻攄攖攙敇敧斁斅旂旰旲昬晌晛晜晡晫晷暤曈曬朅朓朳杈杌杶杻枰枲柹柗柙柰栬栰栱桛桲桵桺梄梥梲棐棖棨棭棰棱棼椑椓椵椻楗楣楲楿榀榦榭榷槖槗樁樏樕樨樴樾橅橐橑橖橛檃檉檑檝檞檟櫜櫧櫬欞欤欵歆歖歠殂殾毡毱氐氳氵⺢汙汶汻沅沕沜泐泔泖泠泫泬泮洊洎洑洮浗浞浥涂涿淄淊淖淩渢湑滇滊滎滽漚漪漯漳潚潞潢潽澋澍澒澔澚澧澨澶濚濞濹瀹瀼灊灔灝灞灤灬灾炁炕炷烓烔烘烜焇焠焱煊煒煠煹熒熳燋燓燖爀爝爫爸牁牓牕牖牜犍犭犴狇狻猄猅猨猱獃獬獼玃玅玆玕玞玟玠玦玫玵玷玼珏珙珩珴珽琄琊琚琛琤琨琬琯琰琱琹瑄瑇瑋瑍瑑瑗瑦瑫瑱璀璅璆璇璐璘璜璠璣璨璫璵璿瓈瓚瓞畎畹疁疐疒疓疴痤痹瘀瘊瘕瘖瘙瘞瘭瘵癃癋癥癭癯癱癴皤皥盅盌盬盼眴眶睜睟睠睲睽瞕瞪矦矰矴砆砢砭砮砰砵硨碞磈磌磎磤磠磡磲磷磻礱礴礻礽祅祛祜禋禖禘禸离秊秚稃稉稑稞稭稹穅穌穝穠穭穸窠窣窳窻窼竆笇笔笧笱筇筎筠筩筭筲箑箯篗篙簋簏簠簦簱簶籑籙籧籮籰粼粿糈糉糗糙糝糫紇紈紉紓紝紣絁絓絙絝絺綆綋綌緌緫緱緹縈縑縕縠繇繢繮繳纍纑纘罄罏罒罓罡羑羿翎翟翥翬翮翯翺耎耑耔耤耦耺耼聠聱聵肞肦肫胗胘脖脘脺腊腌膁膄膴臏臹舃舡舲舴艆艋艏芎芮芷芾苆苾荃荑荕莆莍莒莘莩莿菀菪萏萑葊葶蒨蒯蓀蓂蓰蓽蔌蔴蕞薏薷藎薭蘒蘩虒虣虬虯虺蚍蚑蚘蚧蚨蛺蛽蜋蜓蜙蜞蜨蜾蝱螈螙螬螭螵蟖蟫蟭蠁蠃蠆蠋蠔蠜衖衟衤袘袪袽袾裊裒裛裰裱褆褘褙褚褧褰褾襻觔觖觥觱訇訏訕訢詎詿諴謟謷譃譄譔讜讞豇豔豳貤賙賡賸賾贛赩赬趄趍趕趦跆跎跤跬踠蹋蹬蹰蹺躒躮躳軑軔軹輗輶辦辵辶迆迠迤迶适逬遄邈邕邙邛邢邴郗郝郴鄗鄜鄱鄺鄽酈酛酡酤醎醞醨醭醮醲醼釰釷釻鈇鈨鈳鈸鉃鉇鉏鉠鋂鋋鋌鋟錍錕錟錧鍇鍒鍥鍪鍭鎛鎺鎩鏁鏊鏢鏺鏽鐏鐴鐿鑕鑫鑲镸閦閩閫閴閽闚阝陁陘隄隤隩雒\ue000雞雩雱霂霉靚靣靮靳鞚鞢鞵鞶韙韞韴頊頎頞頣頫頾顒顓顙顬颸颺颿飈飥餲餳饀饍饜饟馱馹馺駉騂騖騤騧騭騮騶騸驊驖骵骶髹鬃鬠鬳鬴魳魹鮧鯁鯇鯗鯧鯫鯷鯺鯽鰋鰧鰪鰶鱁鱓鱣鱰鱷鴂鵂鵇鵣鵩鵼鵾鶍鶱鷃鷇鷖鷟鷫鷴鸕鸝麤麨麬黧黮鼐鼒鼗鼙鼯鼷鼹齁齅齗齨齱齵龐龔龢丰㐅\ue000嘠廋⺕悤\ue000欤濹滦熳爫竆罡聱肞辶釼嶲韞俓僙僰凃噶橔洁淐湂滙珤琡畬硑蟵\ue000玨㫳㓛䐌㺊\ue000龽䯨龼㻚㬢龾䕺䂓\ue000䙥䄃䊓䚮㒈\ue000\uf860\uf861\uf862\uf87a\uf87fヽヾゝゞ〃〆ー≠≦≧∞∴℃ヿゟ∈∋⊆⊇⊂⊃∪∩⊄⊅⊊⊋∉∅⌅⌆∧∨⇒⇔∀∃⊕⊖⊗∥∦∠⊥∂∇≡≒≪≫√∽∝∵∫∬≢≃≅≈≶≷↔∓ℵℏ℧⹀ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔゕゖ\ue000\ue000\ue000\ue000\ue000ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶ\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿヷヸヹヺ\ue000\ue000⋚⋛⅕⌘ḾḿǸǹǖǘǚǜĄ˘ĽŚŞŤŹŻą˛ľśˇşťź˝żŔĂĹĆČĘĎŃŇŐŘŰŢŕăĺćčęďđńňőřűţ˙ĈĜĤĴŜŬĉĝĥĵŝŭɱʋɾɬɮɹʈɖɳɽʂʐɻɭɟɲʝʎɡɰʁħʕʔɦʘǂɓɗʄɠƓɨʉɘɜɞɐɯʊɤɒʍɥʢʡɕʑɺɧ͡ˈˌˑ‿̏˥˦˧˨˩\ue000\ue000̥̬̹̜̟̠̩̯̽˞̴̤̰̼̝̞̘̙̪̺̻̚∮∟⊿ɢɣɪɴɶɸʀʏʙʜʟʰʲʷˁˠˡ∊∑∭≲≳⊘⊞⊠ⁿꞵθꭓ℧⹀⅕ḾḿǸǹǖǘǚǜĄĽŚŞŤŹŻąľśşťźżŔĂĹĆČĘĎŃŇŐŘŰŢŕăĺćčęďđńňőřűţĈĜĤĴŜŬĉĝĥĵŝŭヽヾゝゞ〃〆ーヿゟぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔゕゖ\ue000\ue000\ue000\ue000\ue000ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶ\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿヷヸヹヺ\ue000\ue000ヽ〼ヿ∥〖〗♮♫⤴⤵⦿℧゠–⧺⧻\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ς⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾☖☗▱ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿ⎾⎿⏀⏁⏂⏃⏄⏅⏆⏇⏈⏉⏊⏋⏌‾＿✓⌘␣⏎◐◑◒◓⁇⁈¤⁑⁂㆐㆑㆒㆓㆔㆕㆖㆗㆘㆙㆚㆛㆜㆝㆞㆟∉∦≅≈≢≶≷⊄⊅⊊⊋⋚⋛⎰⎱♲♳♴♵♶♷♸♹♺♻♼♽゙゚⃝〖〗゠–ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿ⎰⎱\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿ\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿ⦿◦\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿヷヸヹヺ\ue000\ue000ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹ\ue000ㇺㇻㇼㇽㇾㇿ\ue000\ue000≠≦≧∞∴℃∈∋⊆⊇⊂⊃∪∩⊄⊅⊊⊋∉∅⌅⌆∧∨⇒⇔∀∃⊕⊖⊗∥∦∠⊥∂∇≡≒≪≫√∽∝∵∫∬≢≃≅≈≶≷↔∓ℵℏ℧⹀⋚⋛⅕⌘ḾḿǸǹǖǘǚǜĄ˘ĽŚŞŤŹŻą˛ľśˇşťź˝żŔĂĹĆČĘĎŃŇŐŘŰŢŕăĺćčęďđńňőřűţ˙ĈĜĤĴŜŬĉĝĥĵŝŭɱʋɾɬɮɹʈɖɳɽʂʐɻɭɟɲʝʎɡɰʁħʕʔɦʘǂɓɗʄɠƓɨʉɘɜɞɐɯʊɤɒʍɥʢʡɕʑɺɧ͡ˈˌˑ‿̏˥˦˧˨˩\ue000\ue000̥̬̹̜̟̠̩̯̽˞̴̤̰̼̝̞̘̙̪̺̻̚∮∟⊿ɢɣɪɴɶɸʀʏʙʜʟʰʲʷˀˠˡ∊∑∭≲≳⊘⊞⊠ⁿꞵθꭓ℧⹀⅕ḾḿǸǹǖǘǚǜĄĽŚŞŤŹŻąľśşťźżŔĂĹĆČĘĎŃŇŐŘŰŢŕăĺćčęďđńňőřűţĈĜĤĴŜŬĉĝĥĵŝŭ佈佟佪佬倎倘偁僲僐儆儃儵兕兗㒵凊凢剗勌勖勻匜卣厝吒呿咈啐喁喭嗎嘻嚞嚩嚳坷坼\ue000埏埤塤墉\ue000壒壠虁妋妒姃娓婧婷媄嫄\ue000孽宓尒屮\ue000屺岏岟岣岪峐\ue000崍嵇嶁嶤嶧巋幞廹开异弣弽彔彽怍怔怘怵恇悝惔惝愫憼憹戢扚扯拖捼揥摹擄擐攩斝昺昢昫昰昳晈\ue000晷晸暍暻曛曨杇极枓枘枛柼栝梣椊楉\ue000楂楤榥槏㮶㯃槩槵\ue000樻\ue000檔檥㰏欛欬歧殩殭毗毿氅汴沘泻泆洱洹洿浘涔涪淛淝湄湞溱滁漐潙潡潾澌澠澼濇濊濰灎灵炤烤焫焞焮煑煨熅熇熺燄爕㸿犛\ue000猧獐獦玢琫瑆瑢瑭璦璩瓉瓿甗㽲痎瘂瘈癤皁皝皪皶盎盔盦盱眊眙睍睎睺瞀瞔矠\ue000硃确碰\ue000碭礀礜礮礴祆祹秈\ue000秔秞秫秭窅\ue000竎竽笒笭笻筯簁簳\ue000籭籹粏粔粠糕紱絜綃綦緂縨羗翛耵耷胊胠胳腠腧腨腭膻臊臗䑛艠艴\ue000芡芣芤芩芿苕苽茀茢茭茺荇荽莧菏菑菡萁萆葟葰葳蒅蒞蒺\ue000蔲蔞蔯蕤蕺薌薢藋藭藿蘄蘅蘐\ue000蘘蘸虗虢䖝虵蚸蛼螇䗪蠊蠐裎\ue000褲褹襀覔觶詇詝詡詵諐譆譙譩讝豉豨趯跑跗踣踽蹻\ue000䡄軺輞輭轔\ue000迨迮逈逭邗邳邾郄郅郇郯鄔鄖鄢鄣鄯鄴醃釱鍉鍤鍥鎣鏟鐄鐳鑊鑣鑱閎閟閬閶闋闐闓䦰闞隥雯靎鞕鞮鞺韁韉韛顖飧饘騃髁髃髎髖鬂鬈䰗鬭魞魦鮄鮊鮞鯎鯥鯸鰣鱏鱐鱥鴝鴞鵃鵒鶊鶖鷀鶬鶼\ue000鷧鸇麞麯龗\ue000丂丏丒丩丮乇\ue000乑㐆\ue000乩亝㐬亼仃仈仫仚仱仵伖佤伷伾佘\ue000佷佸侂侅俦侲俅俋俒㑪俲倓倜偎偓偣傣傈傒傓傕傪\ue000傱傺傻僄僇僳\ue000僎\ue000僔僡㒒\ue000儗\ue000兠\ue000关冃冋㒼冘冣冭㓇\ue000凳划刖\ue000剕剜剬剷劄劂\ue000劘\ue000劤劺劻勊勑\ue000勷匵卂\ue000\ue000卧卺厤厴\ue000厷叀\ue000㕝㕞叕㕣叴吤吨㕮呃呢呬咕咠咦咮咷咺哃\ue000哬哯哱哳唀唁唉唼啁㖦啇㖨啤\ue000啽喂喑㗅嗒\ue000\ue000喿嗉嗌嗑嗝㗚嗢\ue000嗩嘨\ue000嘇嘐嘰㗴嘽噀噇噞噠噭㘅嚈嚌嚝嚨嚲囅囍囟囨囶囷\ue000\ue000圩\ue000坅坆坍\ue000坨坯坳坴坵坻\ue000\ue000垚垝垞垨埗\ue000埌\ue000\ue000埞埰㙊埸埻埽堄堞堧堹\ue000塉塌塧墊墋墍墏墐墔墝墪墱\ue000壃壍壢壳壴夅夆复夔\ue000㚑夽㚙奆㚖\ue000奟\ue000奵奶奼妟妮妼姈姍姞姧姮\ue000\ue000㛏娍娗娧娭婥婺媋媜媟媠媢媱媵媺媿嫚嫜嫥嫰嫮嫵嬈嬗嬴孌孒孨孯宁宄\ue000宖宬㝡㝢寎寖㝬㝫寱寽㝵尃尩\ue000屟屧屨屰\ue000\ue000\ue000\ue000岈岊㟁\ue000\ue000岠岢岧\ue000岭岵\ue000峉\ue000\ue000崆崐崫崝崠崱崹㟨嵡嵪㟴嵰\ue000㟽嶈㠀嶗嶰嶴\ue000巑巗\ue000巤巩㠯㠶㡀帟帾幉㡜幖㡡幭幮\ue000庥庬庹廆廙\ue000廽弈\ue000弞彇彣彲彾徏徢忇忋忒忓忔忢忮忯忳㤗怢怤㤚恌悕您\ue000悱悾惈惙惮惵愐愙愞愺㥯慁慆慠\ue000憒憓憗憥憭\ue000懕懝懵\ue000戣扒扡扤扻扭扳抙拕\ue000拽挃挐\ue000\ue000挲挵挻挼捁捄捎\ue000捙\ue000\ue000捬掙\ue000掔掽揔揕揠揫揬揲搞搥搩搯摚摝摳摽撇撑撟擋擌擕擗\ue000擤擿㩮攏攔㩳攞攲敄敔敫敺斄斊斲斵斸斿旉旔㫖旹旼昄昈昡昪晅晑晎㫪\ue000\ue000\ue000晪晬晭晻暀暐暒㬎暭暱暵㬚㬜㫗朁朒\ue000朙\ue000\ue000杍杔杝\ue000\ue000\ue000杴\ue000枒\ue000荣栐柃柈柒柛柷\ue000\ue000\ue000栘栟栭\ue000栳栻栾桅桉桌桕桗㭷桫桮桼梂梐梖㭭梘梙梚梜梪梫梴梻棻\ue000\ue000棃棅棌棙棤棥棬棷椃椇㮇\ue000㮍楆楩楬楺榒㮤榖榰榺榼槀槑\ue000\ue000\ue000槣槮槯槳㯍槴槾樑樚樝\ue000樲樳樿橉橺橎橒橤\ue000檋㯰檡\ue000檫檽櫆櫔櫐櫝\ue000\ue000櫱櫲櫳櫽\ue000欋欏欐欑\ue000欗㰦欯歊歘歬歵歺殁殛殮\ue000殽毇毈毉毚毦毧毮氂氊氎氶\ue000汍汛汭沄沉㳃沔沗沭泂㳒泜泩泭\ue000洀洤洦洧汧洯洼浛浠浰涀涁涊涍涑涘\ue000\ue000\ue000\ue000涫涮涴淂洴淈淎淟淶渶渞㴑渲湈湉湋湌湏湓湔湗湣㴞溓溧溴滃漵滫滹滻漊漌漘漥漶漼\ue000潒潗潠潨澐澖澾澟澥澯㵤濈濉濩\ue000濼瀀瀊瀣\ue000瀺灃灇灋㶚灥灩灮灶炆炗\ue000炟炱\ue000烬烊烑焃焆焈焌㷀焯煐煓煞㷔熖熀熛熠熢熮熯\ue000燙燜爇㸅爴爹牂牗牣\ue000牮牯牸牿犎\ue000犮犰狁㹠狌㹦㹨狳狺猇猒猘猙㺃猹猬猳猽獒㺔獫\ue000獮獯獱玁玊玔玘玜玥玹玿珅珋珡珧珹琓珺琁瑓瑀瑃瑒瑝璁璈\ue000璒璗璙璡璥璪璹璻璺瓖瓘瓫\ue000瓺\ue000甠甤甪㽗\ue000甽甾畀畈畐畒畲畱畺畽畾疌㽵疢㽷疰疷疿痀痆痏痓痝痟痠痧痮痱瘃瘘瘇瘏㾮\ue000瘓瘛瘜\ue000瘥瘨瘼瘳\ue000㿉癁\ue000癉癕㿗癮皕皡皠皧皨皯\ue000盉\ue000盨\ue000眗眚眭眵\ue000䀹\ue000\ue000睘\ue000睼\ue000䁘瞚瞟瞢瞤矞矟矤矪矬矻\ue000砅砉砍砙砬硇硪\ue000碊碔碤碝碟碻磕磦磹磺磾\ue000礐礛礥祊祘䄅祧祲禕禡禩禴秂秇秌种秖䅈\ue000\ue000䅏稊稕稛䅣稸穇穖穙穜穟穧穪穵窂窊窐窬\ue000䆴窹窾䆿竌竨竴\ue000\ue000\ue000笽笪笮笯䇦䇳筿筁䇮筕筹筤筦筳\ue000䈇箐箛䈎箵箼篅篊\ue000\ue000篔篖篚篪篰簃簎籅籊籗籞籡籩籯\ue000\ue000\ue000粦\ue000粶粷\ue000糄\ue000糍\ue000\ue000糦\ue000糵紃䋆紒紞\ue000\ue000紽紾絀絇\ue000\ue000䋖絚絪絰䋝絿\ue000綈綗\ue000綝綧綪綶緀緗緙緦䌂\ue000縉縐縗縝縧縬繅繵繾纆纇䌫纚䍃缼缻缾罃㓁\ue000\ue000罣罤罭罽罾羐养\ue000羖羜羭\ue000翃翏翣翲耊耈耖耬耰聃聦聻肙肜肤肧肸\ue000胅胕胦脍胵胻䏮脵脞䏰脤脧脬\ue000脽䐈腩䐗䐜膅䐢膘膲臁臃臖臛\ue000臤\ue000臬臽臿\ue000舄\ue000舙舢\ue000舼艉艅\ue000䑶䑺艗\ue000艜艣\ue000䒑艽艿芃芊芓芧芨芲芴芺芼苢苨苷茇茈茌荔茛茝茰茼荄荗䒾䓔䒳莔莕莛莝菉菐菔菝菥菹萕\ue000萗萹葏葑葒葙葚葜\ue000葥葸葼蒁䔍蒗蒦蒾䔈蓎蓏蓓\ue000蓧蓪蓯蓱蓺蔛蔤蔥蔫蕏蕯䕃蕑蕡蕢\ue000蕻蕽蕿薁薆薓薝薟\ue000\ue000\ue000薼藇藊藘藙藟藡藦藶蘀蘑蘞蘡蘤蘧\ue000蘹蘼\ue000虀虓虖虷蚇蚉蚜蚝蚱蚳蛁蛃蛑蛕蛗蛣蛦䖸蜅蜇蜎蜐蜟蜡蜣蜱蜺蝀蝃蝑蝘蝤蝥蝲蝼\ue000\ue000螧螉螋螓螠\ue000䗥螾\ue000蟁蟎蟟\ue000蟣蟥蟦蟪蠓蠨蠮蠲蠼䘏衊衘\ue000\ue000衩\ue000衯袠袼裀\ue000裑裓䙁褁\ue000褷\ue000襂襅襉\ue000襢覉覐覟覰覷觘觫䚡觳觽觿䚯訑訔\ue000訡訵訾詅詍詘誮誐誷諗諼\ue000謊謅謍謜謭䜌譑譞譶讁讋讔讕谹\ue000谽\ue000\ue000豅豏豗豩豭\ue000貓貒貙䝤貛賖賕\ue000賱\ue000贉贎跈跙踌䟽跽踆\ue000踔踖踡踢踧\ue000䠖踶踹蹔蹢蹭蹯躘躞躵躻\ue000䡎\ue000輀輈輫轀轊轘\ue000辤辴\ue000迁迆﨤迊迍迓迕迱迵迻逌逷\ue000遃遝\ue000\ue000邅邌邐邡䢵邰邶郃郈\ue000郜郟\ue000郶郲鄀郫郾郿鄄鄆鄘鄞鄷鄹酆酇酗酙酴酹醅醳醶釃釄\ue000\ue000釬鈁鈖鈗\ue000鉂鉊鉖鉡鉥鉨\ue000鉼鉽鉿銉銍銗銙銟銫\ue000\ue000銲銿鋀鋆鋎鋥錑\ue000\ue000鋷錩\ue000\ue000鍑鍚鍫鍱鍳鎡\ue000\ue000鎈鎋鎏鎞鏵\ue000\ue000鏱鏇鏜鏧鐉鐖鐗鏻鐲鐻\ue000\ue000鑭鑯镹閆閌閍\ue000\ue000闈\ue000\ue000阬阳阴\ue000阼陡\ue000隂\ue000隚\ue000䧧隳隺隽䧺\ue000雘雚雝䨄霔霣䨩霶靁靇靗靛靪\ue000\ue000鞖鞞鞱鞲鞾韌韑韔韘韡韱頄頍頔頖䪼\ue000頲頳頥顇顦颫颭颰\ue000颷颻颼飂飇飋飡飣飪飰飱飳餈䬻\ue000餖餗\ue000餚餛餜\ue000餱餺餻餼饁饆饎饠馣馦馽馿駃駔駙駞\ue000駰駹駼騊騑騚騠騱驄驌驘䯂骯䯊骷䯒骹\ue000髆髐髒髕髠髥髩鬌鬐鬒鬖鬜鬫鬽䰠魋魣魥魫魬魶魷鮦鮬\ue000鮲鮸鮾鯳鯘鯝鯪鯯鯮\ue000\ue000\ue000鰖鰘鰙鰚鰝鰢鰩\ue000鰱鰷鱅鱜\ue000鱉鱊\ue000鱔鱘鱛鱝鱟鱩鱪鱫鱭鱮鱲鱵鱺鳦鳲鴋\ue000鴑鴗鴘\ue000䳄\ue000鴲䳑鵊鵟鵢\ue000\ue000鵳鵶鵷鶄鶙鶡鶿鶵鶹鶽鷉鷚鷠鷣䴇鸊鸂鸍鸜鹻\ue000麀麅麛\ue000麽\ue000黟黿鼂䵷鼃鼺鼽齆齓齕齘\ue000齝\ue000齩齭齰\ue000\ue000㘔㢭㷌㿜䖾䘐䭾䰸䳡丌丣两乹仳伌伙伫伮伱侄侞侷倄倌偌偟偢偷傎傞傢僃僨僱僾儇儌儍儎儳儸兴冄冸冺凈减凑凓凔凘凟刅刦刨别刱刲刵刼剚剠剮剸剹劊劌勡勩勱匃匑匟匭匲匽卥卭卹卾厔厙厪厯厺叁叄叅叠吓吪吱吴吵呌咧咪咱咻哎哪哼唅唈唕唧唪唶啑啦喏喒喔喤喲嗃嗆嗓嗛嗬嗮嗱嗶嗸嘅嘍嘑嘒嘬嘵嘹噍噔嚅嚟嚦嚷囌囏囙囡囫园囱圇圌圚圛圝圬圮圽圾坟坫坭坺垃垗垮埕埧堍堦塍塏塟塭塿墁墘墼够夣奙她妗妯妳姟姱姸媲媸嫪嫶嬛嬝嬡嬸宷寗寠尟尪尬尶屙屜屭峝崁崴崽嵙嵾嶃巇巹帨帲帵幛幨幪幷庀庋庳庽廑廔廕彍徬忪怇恉恔恧悻惄惽愊愖愪愶慞慤慻慽慿憝憸懜懢懥懨戄戇戱戹戽扺抐抨拚拴挖挪挶捆捋捓捱捵捿掂掊掮掯揪揸揹搒搘搠搤搪搵搽搿摒摟摴撐撘撙撬撳擭擰攛攟攮敉敠斒斕斴斾旈旎旐旟晾暋暌暳曀曏朥朵杕枀枏枑枤枱枵枾栨梆棫棵椗椳椸楛楥榨榫榯槥槱橊橕橧橱檯櫈櫉欃欻欿歽歾殰毷毹氄氉氍氬汊汒汔汹沬沴泒浡浼涹淰湅湳湻湽溉溼滚滛漦漩漰澇澝澮澷瀍瀠灉炘炰烕烖煅熲燴爗爟牃牏牐牚牠牨牷犄狉狥狴猂猋猞猢猺猻獍獘獧瑲璯瓟瓤瓴瓻甖甡甿畞疙疤痁痄痌痗痜痡痯瘄瘌瘝瘲瘸癅癊癟皭皽盙盫盰盹眀眎眢眨眯眹眾睅睊睏睞睤睧睬瞄瞌瞍瞖瞧瞯瞷瞾矉矑矙矱砷硜硾碘碡碱碳磉磓礌礟礧礨礿祂祔祫祼禫秄秪稂稌稰稺穄窀窆窔窵窽竾笫筷箠箬箰篨篲篸篼篾簉簨簯籂籒籓籛籜籝籲籽粇粞粺糇糓糚紼絍綂綅綍綑綞綳綹緐緥緵緶縯縶繄繯繸纁缽罛罝罥罱罿羀羋羢翽翾翿耇耍耞耹肈肎胏胔胭胰胷胺胾脃脗脰腗腯腳膋膐膛膞臋臕臝臞臡臯臶舀舋舓舔舚舺艄艭芄芉芑芪芰苐苪苯苶荖荸菸菼葘蒓蒱蒽蓻蕆蕖蕝薅薘虂虆蛀蜔蜢蜮蜹蝝蝻螌螎螗螘螞螣螮螿蟉蟚蠘蠛蠭蠺衅衋衎衕衚衮袚袛袜裍裠裯褎褏褦褵襚襜襫襰襼覥覵覼觕詉詗詧詾誆誖誶諉諑諝諬諵謆謏謑譅譒譭譸譼譾讅讟豋豓豻貺賅賉賒賬賵賷贁贃贗贜赮趑趟趫趲跕跧跱跲跴踁踋踦踱蹀蹁蹍蹏蹜蹡蹩蹱蹵蹷躉躐躕躚躧躩躭軨軰輇輘輥輧輬輵輺轃轇轑轕辠辡辢辥逄逛逯遌遛遰遴遹邋邘邠邲邽郉郰鄅鄥酚酧酺醊醑醕醰醻醽釂釅鈀鈉鈣鉶銎銯銻銼鋁鋃鋅鋈錔錳錶鍘鍿鎂鎊鎻鏌鏦鏹鐂鐍鐎鐮鑌閈閡閿闆闉闑闒闠闤闦阤阱阸阽陔陴陻陿隁隃隉隖隮霃霛霡霢霨霱靧靶靽靿鞙鞟鞬鞹韍韠韯頇頦頮顢顣颴飅餂餑餕餵饈饔饞駡騌騐騣驁驑骽骾鬁鬉鬋鬍鬎鬙鬵魈魕魨鮀鮆鮐鮝鮰鮿鯈鯿鰂鰜鰵鱄鱖鱡鱨鴰鴽鵪鵻鷥鷩鷳鹺麂麃麄麰黤黰黲鼉鼏鼔鼛鼢鼦鼪鼫鼴齚齯龞龥\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000㗞龿鿀鿁鿂\ue000与並\ue000佳偖僭八\ue000凞函\ue000剤剱割匿\ue000呀\ue000喜喫嘉嚮嚮\ue000\ue000囎囮埖堽塙奏契奠奢嫚孚孳孼害\ue000幃\ue000廣弸御忝慢憲懸㦤㦸\ue000\ue000擶㩜\ue000敞\ue000文斉\ue000斎㫄㫋旡晧普曁\ue000㪅最条柄栂椽楞\ue000檜㯳櫸\ue000永沪鿌淤㴱済湲滋滕滛潛潛潤潴\ue000爾㹀㢡珊璽畝疼\ue000瘈癤癩\ue000眷睾禧禱窾篠籐紉網網缾翡耒\ue000胖脉脩舌舛艀\ue000菔萏\ue000蓪\ue000蕑蕣藏虎虢蚊衂衷襁譖譖譜䜟\ue000豪豹賊赧䠞較轄迅返迶遷遷邉邊邨配鋩錵鎋\ue000闍阪隘隧響響\ue000餡饗鮨鮮鮹鰈鰤鰻\ue000鳦鷀鷂\ue000飯\ue000笈摯簾筵甕訝恢灸厩粂隙虔腱鍵咬狡梗鮫叉杖甦甑竈挺遁駁斧釜鞭芒籾爺蠅蜃鬝鬬倂凞匇寬廊昞朗灊凞啡氺穠\ue000蠃閫靕\ue000\ue000΄΅ºª№ĐĦĲĿŊŦĳĸŀŉŧĊĖĞĢĠİĮĶĽĻŅŖŲǗǛǙǕŴŶċėǵğġįķľļņŗųŵŷ℮∆∏≤≥◊΄΅ºª№ĐĦĲĿŊŦĳĸŀŉŧĊĖĞĢĠİĮĶĽĻŅŖŲǗǛǙǕŴŶċėǵğġįķľļņŗųŵŷ℮∆∏≤≥◊ΆΈΉΊΪΌΎΫΏάέήίϊΐόύϋΰώЂЃЄЅІЇЈЉЊЋЌЎЏђѓєѕіїјљњћќўџノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲンABCDEF終H\ue000\ue000\ue000\ue000\ue000段ゴミ1234567890\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue00001234567890123456789年N天再新映声前後終立交\ue000劇司解株気二多文手\ue000\ue000双\ue000\ue000\ue000\ue000デ\ue000———⒑⒒\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000\ue000⚽➿\ue000\ue000΄΅ºª№ĐĦĲĿŊŦĳĸŀŉŧĊĖĞĢĠİĮĶĽĻŅŖŲǗǛǙǕŴŶċėǵğġįķľļņŗųŵŷ℮∆∏≤≥◊΄΅ºª№ĐĦĲĿŊŦĳĸŀŉŧĊĖĞĢĠİĮĶĽĻŅŖŲǗǛǙǕŴŶċėǵğġįķľļņŗųŵŷ℮∆∏≤≥◊溢懲蘒譿丵乜乣乨乴乵亗亯仛仢仨仯仾伂伈伒众伳伵佀佂佋佌佒佣佮佱佹侁侉侌侎侐侓侙侟侹侻侼侽俀俁俆俈俌俜俢俰俼倇倊倗倝倰倲倳倵偅偊偑偒偙偠偧偭偱傁傃傄傆傊傐傛傟傠傡傯傰傹傽僀僓僜僝僟僢僤僶僺僲儙儜儝儣儧儨儬儭儯儱儴儹兂兏兓兘兦兾冎冿凂凒凕凥凲凷刘刢剅剘剟劀劅劕劖劗劚劥劧劰劶劷劸劽勄勆勏勔勜勥勨勪勬勴勶匌匓匘匛匞匥匧匨匩匫匬匰匼卙卛卥厃厇厈厎厡厵厸厽叏叒叓叞叠叧吂吚吡启呄呇呏呞呤呧呩呭呮咁咃咅咉咑咟哊哠哶哾唌唍唲唻唽啉啍啘啚啛啿喓喗喣嗁嗋嗗嗘嗞嗿嘅嘊嘙嘳嘼噁噃噄噆噡噢噣噵嚄嚋嚧嚫嚾囋囐囜囥囦囧圁圂圑圠圢圤圥圪圿坒坢坧坮坱坹坾垁垔垙垟垡垕垧垩垽埝埩埾堃堈埡堌堛堟堭堿塐塕塨塸墇墈墌墖墠墡墢墦壄壂壈壖壝壡夆夒夓夝夡夨夰夳夵夶夿奃奒奞奫奯奲奻妌妎妕妧妭妰妷姁姄姯姲姴姷娀娎娒娞娤娨娪娰婄婅婈婌婐婞婻媐媓媖媙媻嫆嫈嫏嫽嬁孋孞孮宆宎宐宑宔宨宩宭宯宱宲宺宼寁寍寏寙寚寯寴尌尗尦尮尲尵屚屴屵屻屽岇岒岝岲岴峗峮峱峲崒崣崿嵈嵕嵑嵟嵠嵢嵤嵹嵺嵿嶊嶓嶕嶛嶟嶫巃巎巙帇帍帠幋幐幑幜幰庎庢庤庱廌廎廜廞廥廫弆弙弤弫弬弮弰弿彄彛彠彯彴彵彸彺徍徖徝徫徰徱忈忐忑忨忬忲忶忺怊怓怟怭恀恈恑恖恗恱恾悂悆悈悎悑悓悘悞悢悥悷惂惉惊惎惏惢惥惼愂愇愌愗愢愱愵愹慅慉慬慲慸憀憁憃憄憋憜憠憪懀懁懎懏懞懡懧懩懬懭懯戁戃戜戠戧戫扂扄扐扔扜扽抍抎抏抳抶抷抺抾抿拎拪拲挄挋挓挩挭捊捒捔捘捛捦捭捸掕掚掤掦掭揁揅揈揎揓揳搊搰摋摏摓摜摡摣撅撏撛撡撣撦撨撽擉擑擩擪擵攁攈攉攊攓攦攱攺攼攽敃敐敒敟敽斘斠斣斦斮斳旖旘旟旴旵旾旿昍昑昒昖昝昣昦昩昹昷晀晆晊晘晠晵晿晹晼暚暛暜暟暵曂曃曌曎曔曟曫曮朇朜朠朢朾杅杬构枎枖枙枼枽柂柅柉柜柡柦柲柶栔栙栧栯栿桊桘桯桰桱桹桻梈梡梩梮棑棓棜棝棪棶棽椆椉椐椖椱楅楎楦楰楱楻榍榡榸槅槈槾樀樃樠樤樷橕橪檁檆檇檛檰檱檴檾檿櫌櫕櫖櫰櫼欂欆欇欉欨欫欶歍歒歝歫歮歰殅殗殟殠殢殣殨殬殸殹毃毄毣氒氙氟氦氧氨氮氻汋汏汫汸沇沟沰沲泍泏泑泧泲泴洇洏洓洚洨浟浧涒涗涷涽淠淢淥淯淴渀渄渻湒湝湢湨溍溙溠溭溮溳溻滀滈滍滏滭滮漄漈漍漖漛漻漭潏潓潝潬澃澓澦澰濅濨濽瀗瀯瀴瀷灄灈灕炔炖炛炴烺焅焋焭焸煁煋煒煗煚熌熚熰熿燀燌燚燸爈爉爓爚爤爯牅牎牞牫牱牻牼犉犓犨狕狖狘狟狾猍猓猲猵獖獝獞獟獠獩獹玀玎玐玓玗玪玭珆珌珓珝珦珷珻珿琀琑琭瑧瑨瑮璏璑璚璮璱璲瓌瓐瓓瓘瓛瓨瓪瓯瓼甆甒甧甩甶甹畃畇畗畟畡畻畼疅疕疜疺瘒瘣瘩瘹瘺癀癄癙皅皌皍皟皢皣盁盋盔盠盶眆眒眔眕眜眮眽睂睒睖睗睰睳睴瞍瞢瞮瞱瞵矃矒矕矸砎砑砝砣硄硈硌硒硞硠硡硣碏碨碬碲碽碿磇磒磖磛磟磪磳磶磿礆礚礞礠礩礭礵祄祋祏祑祩祻祾禌禑禓禜禨禯秏秝秠秢秥秱秸秼稇稡稧稫稯稴稵穈穕穥穾窋窑窞竉竛竩竬竱竻笟笣笩笰笴笿筀筪箄箉箎箖箥箲箶箺箻箽篂篈篛篴篵篹篺簂簄簆簌簙簛簥簬簴簹簺籆籕籚籣籩籼粆粰粻糏糔糩紏紑紖紦紪紭絑絗絥絧絸絻綁綖緃緄緅緆緍緎縀緢緪緭緺縜縭縳縿繎繐繘繟繥纕纝纞缿罜罦羀羍羏羦羪羴羼翀翈翨耏耓耝耟耠耮耴耾聀聄聤聭肁肹胈胍胒胮胲胶胹脋脜脠脼腅腇腒腡腷膆膎膖膢膮臅臎臫臰臱臲臵臸舀舏舝舨艃艎艑艖艧艻芀芁芇芔芖芘芚芛芠苚苠苤苭茊茋茞茟茡茬茮茳茷茽荂荍荎荰莀莂莄莙莜莦莬莾荓菨萙莭萯葅葇葍葖葜葠葤葧葪葴葽蒒蒕蒩蒪蓇蓈蓌蓲蓷蔂蔃蔇蔎蔐蔜蔢蔧蔪蔳蔶蔿蕐蕒蕜蕝蕟蕠蕹薉薋薠薥薧薴薶薸薽薾薿藂藚藠藨藳藼蘍蘎蘙蘛蘶蘺蘽虘虙虝虠虡虤虩虶蚖蚚蚡蚦蚭蚴蚵蚷蚹蚿蛅蛒蛚蛜蛠蛥蛧蚈蜄蜏蜯蜲蜼蜽蝅蝍蝡蝯螃螄螅螆螐螕螣螱蟈蟊蟕蟙蟜蟢蟤蟱蟳蟸蟺蟿蠉蠙蠒蠚蠞蠰蠵衁衃衈衉衋衑衜衠衱衹衻袀袟袨袺裋裌裞裧裷褍褕褖褠褨褱褺襆襏襒襗襛襡襣襮襳襵襺襽覍覕覛覜覠覴覶觗觩觭觹訄訅訞訠訤訦訫訬訯訽詀詃詓詖詜詥詶詷詺詻誀誃誋誏誒誗誙誟誩誯誳誻諃諆諈諊諓諔諕諰諿謋謞謰謼譂譈譍譣譹讄讍讏谸谾豑豘豛豝豙豣豤豦豵豶豾貆貇貋貐貛貜貹賆賋賏賝賨賯賲賿赥赿趂趈趐趞趠趬趵趷趹趻跀跅跇跊跔跥跰趼踄踅踑踳踷踸蹎蹛蹝蹞蹹躂躃躛躝躢躺軁軃軄軇軜軮軱軷軭輂輏輐輖輠輡輣輨輮輴輷轁轏轒轓轝轞轥辝辸达迀迋运迒迣迾逘逨逩逪逳逴逿遢遦遬邎邥郌郕郘郙郥郒鄈鄍鄐鄚鄠鄩鄮鄶鄼酃酏酓酭酻醁醆醓醔醘醡醦醿釓釔釙釩釪釯釹釽鈄鈅鈌鈒鈓鈘鈜鈝鈤鈥鈦鈮鈯鈰鈵鈶鈾鉆鉍鉘鉜鉝鉩鉮鉯鉰鉵鉹鉻銊銒銠銤銥銨銶銸銺銽鋇鋍鋘鋜鋝鋡鋣鋨鋬鋮鋰錀錈錜錤錪錴錷鍐鍕鍞鍧鍩鍯鍴鍶鍺鍽鎀鎁鎍鎒鎕鎘鎡鎦鎨鎫鎴鎵鎶鏄鏅鏉鏋鏍鏓鏙鏷鐁鐈鐕鐟鐯鐽鑃鑙鑜鑟鑡鑨鑮钄钃镾閄閝閞閺闙闝闟阞阢阥阦阷阹阺陒陖陗陮陼陾隑隟隦雊雚雟雺霅霚霝霡靊靘靷靸靻鞀鞉鞗鞸鞼鞿韄韅韇韊韎韐韗韝韤韷韸韺頙頜頠頯頵顄顊顑顪颮飌飦飶餇餟餢餦餫餴餹饇饙饛馛馝馟馰馲馵駓駚駜駧駪駫駬駴駵駽駾騄騋騞騢騳騵驇驊驋驔驝骪骬骮骲骴骻骿髈髗髛髤髧髬髲髳髵髺髽髿鬀鬄鬅鬛鬦鬵鬷鬹鬺魌魖魗魛魡魪魭魮魸魿鮅鮇鮉鮋鮍鮔鮚鮩鮷鮼鯐鯹鰏鰑鰞鰦鰨鰽鱃鱎鱞鱻鳷鳹鴜鴯鴳鴴鴺鴼鵅鵓鵔鵥鶃鶆鶎鶒鶓鶕鶗鶘鶪鶮鶿鷊鷔鷕鷞鷮鷰鷾鸎鸐鸑鸒鸖麇麎麏麖麘麮麳黆黈黋黕黬黭黱黵黸鼑鼖鼚鼟鼱鼲鼼鼿齃齄齇齖齞齮齳齺齽龏龑龒龖龡龣㋿㋿";
+const AJ1_EXTRA = {7641:"𨳝",7670:"𥡴",7673:"𨻶",7734:"巽",7814:"兔",7816:"冕",7825:"𡨚",7838:"𤏐",7839:"爨",8061:"🄀",8189:"sec",8190:"min",8295:"XIII",8296:"XIV",8297:"XV",8300:"xiii",8301:"xiv",8302:"xv",8306:"TB",8321:"有限会社",8322:"財団法人",8325:"有限会社",8326:"財団法人",9396:"E̊",9399:"I̊",9402:"O̊",9408:"e̊",9411:"ı̊",9414:"o̊",9716:"E̊",9719:"I̊",9722:"O̊",9728:"e̊",9731:"ı̊",9734:"o̊",9791:"2/7",9792:"3/7",9793:"4/7",9794:"5/7",9795:"6/7",9801:"2/9",9802:"4/9",9803:"5/9",9804:"7/9",9805:"8/9",9807:"3/10",9808:"7/10",9809:"9/10",9810:"1/11",9811:"2/11",9812:"3/11",9813:"4/11",9814:"5/11",9815:"6/11",9816:"7/11",9817:"8/11",9818:"9/11",9819:"10/11",9820:"1/12",9821:"5/12",9822:"7/12",9823:"11/12",9824:"1/100",9825:"0/3",9826:"1/2",9827:"1/3",9828:"2/3",9829:"1/4",9830:"3/4",9831:"1/5",9832:"2/5",9833:"3/5",9834:"4/5",9835:"1/6",9836:"5/6",9837:"1/7",9838:"2/7",9839:"3/7",9840:"4/7",9841:"5/7",9842:"6/7",9843:"1/8",9844:"3/8",9845:"5/8",9846:"7/8",9847:"1/9",9848:"2/9",9849:"4/9",9850:"5/9",9851:"7/9",9852:"8/9",9853:"1/10",9854:"3/10",9855:"7/10",9856:"9/10",9857:"1/11",9858:"2/11",9859:"3/11",9860:"4/11",9861:"5/11",9862:"6/11",9863:"7/11",9864:"8/11",9865:"9/11",9866:"10/11",9867:"1/12",9868:"5/12",9869:"7/12",9870:"11/12",9871:"1/100",9884:"00",9885:"01",9886:"02",9887:"03",9888:"04",9889:"05",9890:"06",9891:"07",9892:"08",9893:"09",9894:"21",9895:"22",9896:"23",9897:"24",9898:"25",9899:"26",9900:"27",9901:"28",9902:"29",9903:"30",9904:"31",9905:"32",9906:"33",9907:"34",9908:"35",9909:"36",9910:"37",9911:"38",9912:"39",9913:"40",9914:"41",9915:"42",9916:"43",9917:"44",9918:"45",9919:"46",9920:"47",9921:"48",9922:"49",9923:"50",9924:"51",9925:"52",9926:"53",9927:"54",9928:"55",9929:"56",9930:"57",9931:"58",9932:"59",9933:"60",9934:"61",9935:"62",9936:"63",9937:"64",9938:"65",9939:"66",9940:"67",9941:"68",9942:"69",9943:"70",9944:"71",9945:"72",9946:"73",9947:"74",9948:"75",9949:"76",9950:"77",9951:"78",9952:"79",9953:"80",9954:"81",9955:"82",9956:"83",9957:"84",9958:"85",9959:"86",9960:"87",9961:"88",9962:"89",9963:"90",9964:"91",9965:"92",9966:"93",9967:"94",9968:"95",9969:"96",9970:"97",9971:"98",9972:"99",9973:"100",9986:"xiii",9987:"xiv",9988:"xv",10001:"XIII",10002:"XIV",10003:"XV",10004:"🄐",10005:"🄑",10006:"🄒",10007:"🄓",10008:"🄔",10009:"🄕",10010:"🄖",10011:"🄗",10012:"🄘",10013:"🄙",10014:"🄚",10015:"🄛",10016:"🄜",10017:"🄝",10018:"🄞",10019:"🄟",10020:"🄠",10021:"🄡",10022:"🄢",10023:"🄣",10024:"🄤",10025:"🄥",10026:"🄦",10027:"🄧",10028:"🄨",10029:"🄩",10136:"十一",10137:"十二",10138:"十三",10139:"十四",10140:"十五",10141:"十六",10142:"十七",10143:"十八",10144:"十九",10145:"二十",10233:"()",10234:"00",10263:"51",10264:"52",10265:"53",10266:"54",10267:"55",10268:"56",10269:"57",10270:"58",10271:"59",10272:"60",10273:"61",10274:"62",10275:"63",10276:"64",10277:"65",10278:"66",10279:"67",10280:"68",10281:"69",10282:"70",10283:"71",10284:"72",10285:"73",10286:"74",10287:"75",10288:"76",10289:"77",10290:"78",10291:"79",10292:"80",10293:"81",10294:"82",10295:"83",10296:"84",10297:"85",10298:"86",10299:"87",10300:"88",10301:"89",10302:"90",10303:"91",10304:"92",10305:"93",10306:"94",10307:"95",10308:"96",10309:"97",10310:"98",10311:"99",10312:"100",10504:"00",10505:"01",10506:"02",10507:"03",10508:"04",10509:"05",10510:"06",10511:"07",10512:"08",10513:"09",10525:"21",10526:"22",10527:"23",10528:"24",10529:"25",10530:"26",10531:"27",10532:"28",10533:"29",10534:"30",10535:"31",10536:"32",10537:"33",10538:"34",10539:"35",10540:"36",10541:"37",10542:"38",10543:"39",10544:"40",10545:"41",10546:"42",10547:"43",10548:"44",10549:"45",10550:"46",10551:"47",10552:"48",10553:"49",10554:"50",10555:"51",10556:"52",10557:"53",10558:"54",10559:"55",10560:"56",10561:"57",10562:"58",10563:"59",10564:"60",10565:"61",10566:"62",10567:"63",10568:"64",10569:"65",10570:"66",10571:"67",10572:"68",10573:"69",10574:"70",10575:"71",10576:"72",10577:"73",10578:"74",10579:"75",10580:"76",10581:"77",10582:"78",10583:"79",10584:"80",10585:"81",10586:"82",10587:"83",10588:"84",10589:"85",10590:"86",10591:"87",10592:"88",10593:"89",10594:"90",10595:"91",10596:"92",10597:"93",10598:"94",10599:"95",10600:"96",10601:"97",10602:"98",10603:"99",10604:"100",10631:"🅐",10632:"🅑",10633:"🅒",10634:"🅓",10635:"🅔",10636:"🅕",10637:"🅖",10638:"🅗",10639:"🅘",10640:"🅙",10641:"🅚",10642:"🅛",10643:"🅜",10644:"🅝",10645:"🅞",10646:"🅟",10647:"🅠",10648:"🅡",10649:"🅢",10650:"🅣",10651:"🅤",10652:"🅥",10653:"🅦",10654:"🅧",10655:"🅨",10656:"🅩",10765:"00",10767:"01",10769:"02",10771:"03",10773:"04",10775:"05",10777:"06",10779:"07",10781:"08",10783:"09",10784:"10",10785:"11",10786:"12",10787:"13",10788:"14",10789:"15",10790:"16",10791:"17",10792:"18",10793:"19",10794:"20",10795:"21",10796:"22",10797:"23",10798:"24",10799:"25",10800:"26",10801:"27",10802:"28",10803:"29",10804:"30",10805:"31",10806:"32",10807:"33",10808:"34",10809:"35",10810:"36",10811:"37",10812:"38",10813:"39",10814:"40",10815:"41",10816:"42",10817:"43",10818:"44",10819:"45",10820:"46",10821:"47",10822:"48",10823:"49",10824:"50",10825:"51",10826:"52",10827:"53",10828:"54",10829:"55",10830:"56",10831:"57",10832:"58",10833:"59",10834:"60",10835:"61",10836:"62",10837:"63",10838:"64",10839:"65",10840:"66",10841:"67",10842:"68",10843:"69",10844:"70",10845:"71",10846:"72",10847:"73",10848:"74",10849:"75",10850:"76",10851:"77",10852:"78",10853:"79",10854:"80",10855:"81",10856:"82",10857:"83",10858:"84",10859:"85",10860:"86",10861:"87",10862:"88",10863:"89",10864:"90",10865:"91",10866:"92",10867:"93",10868:"94",10869:"95",10870:"96",10871:"97",10872:"98",10873:"99",10874:"100",10901:"🄰",10902:"🄱",10903:"🄲",10904:"🄳",10905:"🄴",10906:"🄵",10907:"🄶",10908:"🄷",10909:"🄸",10910:"🄹",10911:"🄺",10912:"🄻",10913:"🄼",10914:"🄽",10915:"🄾",10916:"🄿",10917:"🅀",10918:"🅁",10919:"🅂",10920:"🅃",10921:"🅄",10922:"🅅",10923:"🅆",10924:"🅇",10925:"🅈",10926:"🅉",10985:"🈂",11024:"🈷",11038:"00",11040:"01",11042:"02",11044:"03",11046:"04",11048:"05",11050:"06",11052:"07",11054:"08",11056:"09",11057:"10",11058:"11",11059:"12",11060:"13",11061:"14",11062:"15",11063:"16",11064:"17",11065:"18",11066:"19",11067:"20",11068:"21",11069:"22",11070:"23",11071:"24",11072:"25",11073:"26",11074:"27",11075:"28",11076:"29",11077:"30",11078:"31",11079:"32",11080:"33",11081:"34",11082:"35",11083:"36",11084:"37",11085:"38",11086:"39",11087:"40",11088:"41",11089:"42",11090:"43",11091:"44",11092:"45",11093:"46",11094:"47",11095:"48",11096:"49",11097:"50",11098:"51",11099:"52",11100:"53",11101:"54",11102:"55",11103:"56",11104:"57",11105:"58",11106:"59",11107:"60",11108:"61",11109:"62",11110:"63",11111:"64",11112:"65",11113:"66",11114:"67",11115:"68",11116:"69",11117:"70",11118:"71",11119:"72",11120:"73",11121:"74",11122:"75",11123:"76",11124:"77",11125:"78",11126:"79",11127:"80",11128:"81",11129:"82",11130:"83",11131:"84",11132:"85",11133:"86",11134:"87",11135:"88",11136:"89",11137:"90",11138:"91",11139:"92",11140:"93",11141:"94",11142:"95",11143:"96",11144:"97",11145:"98",11146:"99",11147:"100",11308:"00",11310:"01",11312:"02",11314:"03",11316:"04",11318:"05",11320:"06",11322:"07",11324:"08",11326:"09",11327:"10",11328:"11",11329:"12",11330:"13",11331:"14",11332:"15",11333:"16",11334:"17",11335:"18",11336:"19",11337:"20",11338:"21",11339:"22",11340:"23",11341:"24",11342:"25",11343:"26",11344:"27",11345:"28",11346:"29",11347:"30",11348:"31",11349:"32",11350:"33",11351:"34",11352:"35",11353:"36",11354:"37",11355:"38",11356:"39",11357:"40",11358:"41",11359:"42",11360:"43",11361:"44",11362:"45",11363:"46",11364:"47",11365:"48",11366:"49",11367:"50",11368:"51",11369:"52",11370:"53",11371:"54",11372:"55",11373:"56",11374:"57",11375:"58",11376:"59",11377:"60",11378:"61",11379:"62",11380:"63",11381:"64",11382:"65",11383:"66",11384:"67",11385:"68",11386:"69",11387:"70",11388:"71",11389:"72",11390:"73",11391:"74",11392:"75",11393:"76",11394:"77",11395:"78",11396:"79",11397:"80",11398:"81",11399:"82",11400:"83",11401:"84",11402:"85",11403:"86",11404:"87",11405:"88",11406:"89",11407:"90",11408:"91",11409:"92",11410:"93",11411:"94",11412:"95",11413:"96",11414:"97",11415:"98",11416:"99",11417:"100",11577:"00",11579:"01",11581:"02",11583:"03",11585:"04",11587:"05",11589:"06",11591:"07",11593:"08",11595:"09",11596:"10",11597:"11",11598:"12",11599:"13",11600:"14",11601:"15",11602:"16",11603:"17",11604:"18",11605:"19",11606:"20",11607:"21",11608:"22",11609:"23",11610:"24",11611:"25",11612:"26",11613:"27",11614:"28",11615:"29",11616:"30",11617:"31",11618:"32",11619:"33",11620:"34",11621:"35",11622:"36",11623:"37",11624:"38",11625:"39",11626:"40",11627:"41",11628:"42",11629:"43",11630:"44",11631:"45",11632:"46",11633:"47",11634:"48",11635:"49",11636:"50",11637:"51",11638:"52",11639:"53",11640:"54",11641:"55",11642:"56",11643:"57",11644:"58",11645:"59",11646:"60",11647:"61",11648:"62",11649:"63",11650:"64",11651:"65",11652:"66",11653:"67",11654:"68",11655:"69",11656:"70",11657:"71",11658:"72",11659:"73",11660:"74",11661:"75",11662:"76",11663:"77",11664:"78",11665:"79",11666:"80",11667:"81",11668:"82",11669:"83",11670:"84",11671:"85",11672:"86",11673:"87",11674:"88",11675:"89",11676:"90",11677:"91",11678:"92",11679:"93",11680:"94",11681:"95",11682:"96",11683:"97",11684:"98",11685:"99",11686:"100",11713:"🅰",11714:"🅱",11715:"🅲",11716:"🅳",11717:"🅴",11718:"🅵",11719:"🅶",11720:"🅷",11721:"🅸",11722:"🅹",11723:"🅺",11724:"🅻",11725:"🅼",11726:"🅽",11727:"🅾",11728:"🅿",11729:"🆀",11730:"🆁",11731:"🆂",11732:"🆃",11733:"🆄",11734:"🆅",11735:"🆆",11736:"🆇",11737:"🆈",11738:"🆉",11849:"PH",11854:"VS",11857:"c/c",11867:"m/m",11868:"n/m",11871:"さじ",11872:"さじ",11873:"アト",11878:"ウルシ",11880:"エクサ",11883:"オングストローム",11885:"オントロ",11887:"カップ",11895:"キロリットル",11897:"グスーム",11899:"クルザード",11908:"デカ",11910:"テラ",11911:"ドラクマ",11914:"バーツ",11916:"パスカル",11917:"バレル",11922:"ファラド",11923:"フェムト",11927:"ヘクト",11928:"ヘクトパスカル",11929:"ペセタ",11931:"ペタ",11948:"ユーロ",11949:"ラド",11952:"ルクス",11953:"ルピア",11957:"アト",11962:"ウルシ",11964:"エクサ",11967:"オングストローム",11969:"オントロ",11971:"カップ",11979:"キロリツトル",11981:"グスーム",11983:"クルザハド",11992:"デカ",11994:"テラ",11995:"ドラクマ",11998:"バーツ",12000:"パスカル",12001:"バレル",12006:"ファラド",12007:"フェムト",12011:"ヘクト",12012:"ヘクトパスカル",12013:"ペセタ",12015:"ペタ",12032:"ユーロ",12033:"ラド",12036:"ルクス",12037:"ルピア",12045:"医療法人",12046:"学校法人",12047:"共同組合",12048:"協同組合",12049:"合資会社",12050:"合名会社",12051:"社団法人",12052:"宗教法人",12053:"郵便番号",12054:"医療法人",12055:"学校法人",12056:"共同組合",12057:"協同組合",12058:"合資会社",12059:"合名会社",12060:"社団法人",12061:"宗教法人",12062:"郵便番号",12088:"JAS",12117:"\u005c\u005c",12269:"𛄲",12270:"𛄲",12271:"𛅕",12272:"𛅕",12295:"𛄲",12385:"𛅕",12478:"𛄲",12568:"𛅕",12912:"E̊",12915:"I̊",12918:"O̊",12924:"e̊",12927:"ı̊",12930:"o̊",13232:"E̊",13235:"I̊",13238:"O̊",13244:"e̊",13247:"ı̊",13250:"o̊",13357:"眞",13523:"𠤎",13646:"𦥑",13651:"𫟘",13656:"沿",13670:"芽",13679:"槪",13684:"割",13691:"𦈢",13706:"𠮷",13717:"𩵋",13718:"𩵋",13719:"卿",13723:"𣘺",13724:"𫞎",13750:"憲",13755:"𠩤",13768:"浩",13780:"𫝆",13782:"𫝷",13801:"滋",13803:"𠮟",13807:"勺",13809:"爵",13815:"周",13832:"将",13834:"𭕄",13839:"𠀋",13841:"城",13849:"𩙿",13854:"真",13857:"𠆢",13863:"𮕩",13866:"𫝑",13867:"成",13898:"𧾷",13904:"𣳾",13916:"炭",13922:"𥫗",13928:"彫",13932:"潮",13953:"𡈽",13954:"冬",13995:"𤴔",13998:"姬",14064:"𫞉",14068:"諭",14069:"輸",14075:"𥙿",14100:"𦚰",14105:"𠘨",14108:"𠂊",14109:"𠦄",14121:"寃",14129:"拔",14134:"𦦙",14140:"𣏌",14145:"𪧦",14174:"𫞽",14180:"絣",14187:"𮉸",14188:"𠔿",14189:"𦉪",14190:"𦉰",14209:"𠂰",14226:"𮛪",14253:"𨦇",14256:"𨸗",14278:"𫠚",14280:"𪘚",14281:"𤋮",14282:"𤋮",14291:"桒",14293:"𣲾",14294:"𠘑",15269:"嶲",15388:"你",15393:"𣘺",15422:"𣏾",15428:"𣗄",15437:"𩸽",15443:"𢘉",15603:"か゚",15604:"き゚",15605:"く゚",15606:"け゚",15607:"こ゚",15694:"カ゚",15695:"キ゚",15696:"ク゚",15697:"ケ゚",15698:"コ゚",15699:"セ゚",15700:"ツ゚",15701:"ト゚",15712:"ㇷ゚",15723:"𛄲",15724:"𛅕",15856:"˩˥",15857:"˥˩",16071:"か゚",16072:"き゚",16073:"く゚",16074:"け゚",16075:"こ゚",16162:"カ゚",16163:"キ゚",16164:"ク゚",16165:"ケ゚",16166:"コ゚",16167:"セ゚",16168:"ツ゚",16169:"ト゚",16180:"ㇷ゚",16191:"𛄲",16192:"𛅕",16209:"か゚",16210:"き゚",16211:"く゚",16212:"け゚",16213:"こ゚",16214:"カ゚",16215:"キ゚",16216:"ク゚",16217:"ケ゚",16218:"コ゚",16219:"セ゚",16220:"ツ゚",16221:"ト゚",16246:"ㇷ゚",16343:"ㇷ゚",16352:"か゚",16353:"き゚",16354:"く゚",16355:"け゚",16356:"こ゚",16357:"カ゚",16358:"キ゚",16359:"ク゚",16360:"ケ゚",16361:"コ゚",16362:"セ゚",16363:"ツ゚",16364:"ト゚",16375:"ㇷ゚",16382:"か゚",16383:"き゚",16384:"く゚",16385:"け゚",16386:"こ゚",16387:"カ゚",16388:"キ゚",16389:"ク゚",16390:"ケ゚",16391:"コ゚",16392:"セ゚",16393:"ツ゚",16394:"ト゚",16405:"ㇷ゚",16414:"か゚",16415:"き゚",16416:"く゚",16417:"け゚",16418:"こ゚",16419:"カ゚",16420:"キ゚",16421:"ク゚",16422:"ケ゚",16423:"コ゚",16424:"セ゚",16425:"ツ゚",16426:"ト゚",16437:"ㇷ゚",16448:"𛄲",16449:"𛅕",16460:"ㇷ゚",16467:"𛄲",16468:"𛅕",16659:"˩˥",16660:"˥˩",16816:"𡌛",16821:"𡑮",16833:"𡢽",16838:"𡚴",16845:"𡸴",16888:"𣇄",16905:"𣗄",16914:"𣜿",16916:"𣝣",16970:"𤟱",17005:"𥒎",17009:"𥔎",17018:"𥝱",17024:"𥧄",17033:"𥶡",17063:"𦫿",17089:"𦹀",17103:"𧃴",17117:"𧚄",17140:"𨉷",17146:"𨏍",17227:"𪆐",17233:"𠂉",17240:"𠂢",17243:"𠂤",17259:"𠈓",17282:"𠌫",17289:"𠎁",17291:"𠍱",17295:"𠏹",17297:"𠑊",17299:"𠔉",17308:"𠗖",17312:"𠝏",17319:"𠠇",17321:"𠠺",17327:"𠢹",17331:"𠥼",17332:"𠦝",17337:"𠫓",17340:"𠬝",17359:"𠵅",17373:"𠷡",17379:"𠺕",17380:"𠹭",17388:"𠹤",17391:"𠽟",17414:"𡈁",17415:"𡉕",17417:"𡉻",17421:"𡉴",17428:"𡋤",17429:"𡋗",17435:"𡋽",17437:"𡌶",17438:"𡍄",17449:"𡏄",17462:"𡑭",17472:"𡗗",17478:"𦰩",17480:"𡙇",17492:"𡜆",17493:"𡝂",17525:"𡧃",17539:"𡱖",17544:"𡴭",17545:"𡵅",17546:"𡵸",17547:"𡵢",17551:"𡶡",17552:"𡶜",17556:"𡶒",17559:"𡶷",17561:"𡷠",17562:"𡸳",17575:"𡼞",17582:"𡽶",17585:"𡿺",17599:"𢅻",17605:"𢌞",17608:"𢎭",17632:"𢛳",17647:"𢡛",17653:"𢢫",17657:"𢦏",17667:"𢪸",17671:"𢭏",17672:"𢭐",17680:"𢭆",17682:"𢰝",17683:"𢮦",17686:"𢰤",17710:"𢷡",17742:"𣇃",17743:"𣇵",17744:"𣆶",17761:"𣍲",17763:"𣏓",17764:"𣏒",17768:"𣏐",17769:"𣏤",17770:"𣏕",17772:"𣏚",17774:"𣏟",17782:"𣑊",17783:"𣑑",17784:"𣑋",17788:"𣑥",17814:"𣓤",17815:"𣕚",17827:"𣖔",17841:"𣘹",17842:"𣙇",17843:"𣘸",17854:"𣜜",17863:"𣜌",17867:"𣝤",17874:"𣟿",17875:"𣟧",17880:"𣠤",17885:"𣠽",17897:"𣪘",17910:"𣱿",17925:"𣴀",17942:"𣵀",17943:"𣷺",17944:"𣷹",17945:"𣷓",17983:"𣽾",17998:"𤂖",18003:"𤄃",18015:"𤇆",18018:"𤇾",18039:"𤎼",18049:"𤘩",18055:"𤚥",18077:"𤢖",18104:"𤩍",18117:"𤭖",18119:"𤭯",18124:"𤰖",18158:"𤸎",18162:"𤸷",18167:"𤹪",18170:"𤺋",18181:"𥁊",18183:"𥁕",18185:"𥄢",18190:"𥆩",18192:"𥇥",18193:"𥇍",18195:"𥈞",18197:"𥉌",18209:"𥐮",18217:"𥓙",18229:"𥖧",18248:"𥞩",18249:"𥞴",18268:"𥧔",18276:"𥫤",18277:"𥫣",18278:"𥫱",18293:"𥮲",18302:"𥱋",18303:"𥱤",18318:"𥸮",18319:"𥹖",18320:"𥹥",18322:"𥹢",18325:"𥻘",18327:"𥻂",18329:"𥻨",18330:"𥼣",18332:"𥽜",18338:"𥿠",18339:"𥿔",18344:"𦀌",18345:"𥿻",18352:"𦀗",18355:"𦁠",18365:"𦃭",18385:"𦉰",18386:"𦊆",18394:"𣴎",18398:"𦐂",18416:"𦙾",18430:"𦜝",18444:"𦣝",18446:"𦣪",18450:"𦥯",18452:"𦧝",18455:"𦨞",18459:"𦩘",18463:"𦪌",18466:"𦪷",18506:"𦱳",18515:"𦳝",18528:"𦹥",18544:"𦾔",18553:"𦿸",18554:"𦿶",18555:"𦿷",18571:"𧄍",18574:"𧄹",18610:"𧏛",18611:"𧏚",18617:"𧏾",18620:"𧐐",18624:"𧑉",18637:"𧘕",18638:"𧘔",18640:"𧘱",18645:"𧚓",18650:"𧜎",18652:"𧜣",18656:"𧝒",18672:"𧦅",18684:"𧪄",18699:"𧮳",18701:"𧮾",18702:"𧯇",18708:"𧲸",18716:"𧶠",18718:"𧸐",18727:"𨂊",18733:"𨂻",18745:"𨊂",18747:"𨋳",18754:"𨐌",18757:"𨑕",18770:"𨕫",18773:"𨗈",18774:"𨗉",18784:"𨛗",18787:"𨛺",18811:"𨥉",18812:"𨥆",18817:"𨥫",18824:"𨦈",18834:"𨦺",18835:"𨦻",18843:"𨨞",18844:"𨨩",18847:"𨩱",18848:"𨩃",18855:"𨪙",18856:"𨫍",18862:"𨫤",18863:"𨫝",18874:"𨯁",18875:"𨯯",18882:"𨴐",18883:"𨵱",18885:"𨷻",18886:"𨸟",18890:"𨸶",18893:"𨺉",18895:"𨻫",18897:"𨼲",18903:"𨿸",18917:"𩊠",18918:"𩊱",18935:"𩒐",18944:"𩗏",18959:"𩛰",18962:"𩜙",18966:"𩝐",18983:"𩣆",19001:"𩩲",19026:"𩷛",19036:"𩸕",19037:"𩺊",19038:"𩹉",19046:"𩻄",19051:"𩻩",19054:"𩻛",19071:"𩿎",19075:"𪀯",19077:"𪀚",19083:"𪃹",19084:"𪂂",19105:"𢈘",19109:"𪎌",19111:"𪐷",19123:"𪗱",19125:"𪘂",19129:"𪚲",19130:"𱍐",20057:"𠃵",20058:"𤸄",20059:"𤿲",20060:"𧵳",20061:"再",20062:"善",20063:"形",20064:"慈",20065:"栟",20066:"軔",20072:"𪊲",20075:"𠅘",20080:"𠖱",20083:"𠛬",20088:"𫝓",20090:"𠵘",20096:"𫝚",20097:"𫝜",20112:"𥧌",20114:"𫝶",20124:"𢹂",20125:"𫝼",20128:"𠟈",20130:"𢿫",20133:"𧦴",20141:"𫞂",20149:"𫞋",20153:"𫞔",20168:"𤁋",20176:"𫞬",20180:"𫞯",20194:"𫟉",20201:"𫟏",20204:"𫟒",20206:"𦲞",20220:"𧰼",20240:"𫟰",20247:"𫝥",20256:"𫠍",20260:"𫠗",20262:"𣠽",20311:"𦍌",20315:"𩸽",20316:"𪘚",20505:"CL",20506:"KCL",20507:"BEL",20508:"AS",20509:"AM",20523:"0×",20524:"1×",20525:"2×",20526:"3×",20527:"4×",20528:"5×",20529:"6×",20530:"7×",20531:"8×",20532:"9×",20565:"ほか",20575:"PV",20576:"MV",20578:"SS",20579:"S1",20580:"S2",20581:"S3",20583:"HV",20589:"00",20590:"01",20591:"02",20592:"03",20593:"04",20594:"05",20595:"06",20596:"07",20597:"08",20598:"09",20599:"10",20600:"11",20601:"12",20602:"13",20603:"14",20604:"15",20605:"16",20606:"17",20607:"18",20608:"19",20609:"20",20610:"21",20611:"22",20612:"23",20613:"24",20614:"25",20615:"26",20616:"27",20617:"28",20618:"29",20619:"30",20620:"31",20621:"32",20622:"33",20623:"34",20624:"35",20625:"36",20626:"37",20627:"38",20628:"39",20629:"40",20630:"41",20631:"42",20632:"43",20633:"44",20634:"45",20635:"46",20636:"47",20637:"48",20638:"49",20639:"50",20640:"51",20641:"52",20642:"53",20643:"54",20644:"55",20645:"56",20646:"57",20647:"58",20648:"59",20649:"'00",20650:"'01",20651:"'02",20652:"'03",20653:"'04",20654:"'05",20655:"'06",20656:"'07",20657:"'08",20658:"'09",20659:"'10",20660:"'11",20661:"'12",20662:"'13",20663:"'14",20664:"'15",20665:"'16",20666:"'17",20667:"'18",20668:"'19",20669:"'20",20670:"'21",20671:"'22",20672:"'23",20673:"'24",20674:"'25",20675:"'26",20676:"'27",20677:"'28",20678:"'29",20679:"'30",20680:"'31",20681:"'32",20682:"'33",20683:"'34",20684:"'35",20685:"'36",20686:"'37",20687:"'38",20688:"'39",20689:"'40",20690:"'41",20691:"'42",20692:"'43",20693:"'44",20694:"'45",20695:"'46",20696:"'47",20697:"'48",20698:"'49",20699:"'50",20700:"'51",20701:"'52",20702:"'53",20703:"'54",20704:"'55",20705:"'56",20706:"'57",20707:"'58",20708:"'59",20709:"'60",20710:"'61",20711:"'62",20712:"'63",20713:"'64",20714:"'65",20715:"'66",20716:"'67",20717:"'68",20718:"'69",20719:"'70",20720:"'71",20721:"'72",20722:"'73",20723:"'74",20724:"'75",20725:"'76",20726:"'77",20727:"'78",20728:"'79",20729:"'80",20730:"'81",20731:"'82",20732:"'83",20733:"'84",20734:"'85",20735:"'86",20736:"'87",20737:"'88",20738:"'89",20739:"'90",20740:"'91",20741:"'92",20742:"'93",20743:"'94",20744:"'95",20745:"'96",20746:"'97",20747:"'98",20748:"'99",20749:"00",20750:"01",20751:"02",20752:"03",20753:"04",20754:"05",20755:"06",20756:"07",20757:"08",20758:"09",20759:"10",20760:"11",20761:"12",20762:"13",20763:"14",20764:"15",20765:"16",20766:"17",20767:"18",20768:"19",20769:"20",20770:"21",20771:"22",20772:"23",20773:"24",20774:"25",20775:"26",20776:"27",20777:"28",20778:"29",20779:"30",20780:"31",20781:"32",20782:"33",20783:"34",20784:"35",20785:"36",20786:"37",20787:"38",20788:"39",20789:"40",20790:"41",20791:"42",20792:"43",20793:"44",20794:"45",20795:"46",20796:"47",20797:"48",20798:"49",20799:"50",20800:"51",20801:"52",20802:"53",20803:"54",20804:"55",20805:"56",20806:"57",20807:"58",20808:"59",20809:"60",20810:"61",20811:"62",20812:"63",20813:"64",20814:"65",20815:"66",20816:"67",20817:"68",20818:"69",20819:"70",20820:"71",20821:"72",20822:"73",20823:"74",20824:"75",20825:"76",20826:"77",20827:"78",20828:"79",20829:"80",20830:"81",20831:"82",20832:"83",20833:"84",20834:"85",20835:"86",20836:"87",20837:"88",20838:"89",20839:"90",20840:"91",20841:"92",20842:"93",20843:"94",20844:"95",20845:"96",20846:"97",20847:"98",20848:"99",20849:"100",20850:"101",20851:"102",20852:"103",20853:"104",20854:"105",20855:"106",20856:"107",20857:"108",20858:"109",20859:"110",20860:"111",20861:"112",20862:"113",20863:"114",20864:"115",20865:"116",20866:"117",20867:"118",20868:"119",20869:"120",20870:"121",20871:"122",20872:"123",20873:"124",20874:"125",20875:"126",20876:"127",20877:"128",20878:"129",20879:"130",20880:"131",20881:"132",20882:"133",20883:"134",20884:"135",20885:"136",20886:"137",20887:"138",20888:"139",20889:"140",20890:"141",20891:"142",20892:"143",20893:"144",20894:"145",20895:"146",20896:"147",20897:"148",20898:"149",20899:".0",20900:".1",20901:".2",20902:".3",20903:".4",20904:".5",20905:".6",20906:".7",20907:".8",20908:".9",20909:",0",20910:",1",20911:",2",20912:",3",20913:",4",20914:",5",20915:",6",20916:",7",20917:",8",20918:",9",20919:"ppb",20920:"ppm",20921:"'S",20922:"H2",20923:"O2",20924:"Ox",20925:"Nx",20926:"Q2",20927:"Jr.",20928:"Dr.",20929:"ガル",20930:"グレイ",20931:"クローナ",20932:"シーベルト",20933:"シェケル",20934:"ジュール",20935:"デシベル",20936:"ドット",20937:"バイト",20938:"ビット",20939:"ベクレル",20940:"ボー",20941:"ランド",20942:"リンギット",20943:"ガル",20944:"グレイ",20945:"クローナ",20946:"シーベルト",20947:"シェケル",20948:"ジュール",20949:"デシベル",20950:"ドット",20951:"バイト",20952:"ビット",20953:"ベクレル",20954:"ボー",20955:"ランド",20956:"リンギット",20959:"。」",20960:"。』"};
+
+
+/* ↓↓ ここから「5. 日付」までは、予製カード検索（v2026.11.11-6）の読み取り部分と同じもの（src/shared_reader.js）。
+      GoodNotesのPDFの読み方を、検索アプリとそろえるため、手を加えずに使う ↓↓ */
+/* =========================================================
+   1. 小さな道具
+   ========================================================= */
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const WD = '日月火水木金土';
+const ERA_CLASS = '[MTSHRmtshr明大昭平令]';
+
+// Adobe-Japan1 の文字番号（CID）を文字に変換する
+function aj1(cid) {
+  if (cid < 0 || cid >= AJ1_MAIN.length) return '';
+  const ch = AJ1_MAIN[cid];
+  if (ch === AJ1_PH) return AJ1_EXTRA[cid] || '';
+  return ch === '�' ? '' : ch;
+}
+
+// バイト列を「1バイト＝1文字」の文字列にする
+function bytesToStr(u8) {
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return s;
+}
+
+// 圧縮されたデータ（FlateDecode・ZIP）を展開する。壊れていても読めたところまでは使う
+async function inflate(u8, raw) {
+  for (const [fmt, skip] of (raw ? [['deflate-raw', 0]] : [['deflate', 0], ['deflate-raw', 2]])) {
+    const chunks = []; let total = 0;
+    try {
+      const rd = new Blob([u8.subarray(skip)]).stream().pipeThrough(new DecompressionStream(fmt)).getReader();
+      for (;;) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        chunks.push(value); total += value.length;
+      }
+    } catch (e) { /* 途中までのデータを使う */ }
+    if (total > 0) {
+      const out = new Uint8Array(total); let o = 0;
+      for (const c of chunks) { out.set(c, o); o += c.length; }
+      return out;
+    }
+  }
+  return null;
+}
+
+/* =========================================================
+   2a. ZIP（圧縮フォルダー）の読み取り：中のPDFを1件ずつ取り出す
+   ========================================================= */
+async function readSlice(file, a, b) { return new Uint8Array(await file.slice(a, b).arrayBuffer()); }
+const u16 = (u8, p) => u8[p] | (u8[p + 1] << 8);
+const u32 = (u8, p) => (u8[p] | (u8[p + 1] << 8) | (u8[p + 2] << 16) | (u8[p + 3] << 24)) >>> 0;
+const u64 = (u8, p) => u32(u8, p) + u32(u8, p + 4) * 4294967296;
+let utf8Fatal = null, sjisNames = null;
+function zipName(bytes, flags) {
+  if (flags & 0x800) return new TextDecoder('utf-8').decode(bytes);
+  try { if (!utf8Fatal) utf8Fatal = new TextDecoder('utf-8', { fatal: true }); return utf8Fatal.decode(bytes); }
+  catch (e) { if (!sjisNames) sjisNames = new TextDecoder('shift_jis'); return sjisNames.decode(bytes); }
+}
+async function listZip(file) {
+  const size = file.size;
+  const tail = await readSlice(file, Math.max(0, size - 65600), size);
+  let e = -1;
+  for (let i = tail.length - 22; i >= 0; i--) {
+    if (tail[i] === 0x50 && tail[i + 1] === 0x4B && tail[i + 2] === 0x05 && tail[i + 3] === 0x06) { e = i; break; }
+  }
+  if (e < 0) throw new Error('zip');
+  let count = u16(tail, e + 10), cdSize = u32(tail, e + 12), cdOff = u32(tail, e + 16);
+  if (count === 0xFFFF || cdSize === 0xFFFFFFFF || cdOff === 0xFFFFFFFF) {
+    const l = e - 20;
+    if (l >= 0 && u32(tail, l) === 0x07064B50) {
+      const z64 = u64(tail, l + 8);
+      const z = await readSlice(file, z64, z64 + 56);
+      if (u32(z, 0) === 0x06064B50) { count = u64(z, 32); cdSize = u64(z, 40); cdOff = u64(z, 48); }
+    }
+  }
+  const cd = await readSlice(file, cdOff, cdOff + cdSize);
+  const out = [];
+  let p = 0;
+  for (let k = 0; k < count && p + 46 <= cd.length; k++) {
+    if (u32(cd, p) !== 0x02014B50) break;
+    const flags = u16(cd, p + 8), method = u16(cd, p + 10);
+    let csize = u32(cd, p + 20), usize = u32(cd, p + 24), lho = u32(cd, p + 42);
+    const nlen = u16(cd, p + 28), xlen = u16(cd, p + 30), clen = u16(cd, p + 32);
+    const name = zipName(cd.subarray(p + 46, p + 46 + nlen), flags);
+    for (let x = p + 46 + nlen, xe = x + xlen; x + 4 <= xe;) {
+      const id = u16(cd, x), sz = u16(cd, x + 2);
+      if (id === 0x0001) {
+        let q = x + 4;
+        if (usize === 0xFFFFFFFF) { usize = u64(cd, q); q += 8; }
+        if (csize === 0xFFFFFFFF) { csize = u64(cd, q); q += 8; }
+        if (lho === 0xFFFFFFFF) { lho = u64(cd, q); q += 8; }
+      }
+      x += 4 + sz;
+    }
+    out.push({ name, flags, method, csize, usize, lho });
+    p += 46 + nlen + xlen + clen;
+  }
+  return out;
+}
+async function zipEntryBytes(file, ent) {
+  if (ent.flags & 1) throw new Error('encrypted');
+  const lh = await readSlice(file, ent.lho, ent.lho + 30);
+  if (u32(lh, 0) !== 0x04034B50) throw new Error('zip');
+  const start = ent.lho + 30 + u16(lh, 26) + u16(lh, 28);
+  const comp = await readSlice(file, start, start + ent.csize);
+  if (ent.method === 0) return comp;
+  if (ent.method === 8) { const out = await inflate(comp, true); if (out) return out; }
+  throw new Error('zip');
+}
+
+/* =========================================================
+   2b. PDFの読み取り（外部ライブラリなし・最小限）
+   ========================================================= */
+class PName { constructor(n) { this.n = n; } }
+class PRef { constructor(num, gen) { this.num = num; this.gen = gen; } }
+class PStr { constructor(s) { this.s = s; } }
+class POp { constructor(op) { this.op = op; } }
+class PDict {
+  constructor() { this.m = new Map(); }
+  get(k) { return this.m.get(k); }
+  set(k, v) { this.m.set(k, v); }
+  has(k) { return this.m.has(k); }
+}
+const EOF = Symbol('EOF');
+const nameOf = v => (v instanceof PName ? v.n : '');
+const isWS = c => c === 0x20 || c === 0x0A || c === 0x0D || c === 0x09 || c === 0x0C || c === 0x00;
+const isDelim = c => c === 0x28 || c === 0x29 || c === 0x3C || c === 0x3E || c === 0x5B || c === 0x5D || c === 0x7B || c === 0x7D || c === 0x2F || c === 0x25;
+const NUM_RE = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+
+class Lexer {
+  constructor(str, pos, allowRef) { this.s = str; this.p = pos || 0; this.n = str.length; this.allowRef = allowRef !== false; }
+  skipWS() {
+    const s = this.s; let p = this.p;
+    while (p < this.n) {
+      const c = s.charCodeAt(p);
+      if (c === 0x25) { while (p < this.n && s.charCodeAt(p) !== 0x0A && s.charCodeAt(p) !== 0x0D) p++; }
+      else if (isWS(c)) p++;
+      else break;
+    }
+    this.p = p;
+  }
+  next() {
+    this.skipWS();
+    const s = this.s, p = this.p;
+    if (p >= this.n) return EOF;
+    const c = s[p];
+    if (c === '[' || c === ']' || c === '{' || c === '}') { this.p = p + 1; return c; }
+    if (c === '<') {
+      if (s[p + 1] === '<') { this.p = p + 2; return '<<'; }
+      const e = s.indexOf('>', p + 1);
+      const end = e < 0 ? this.n : e;
+      const hex = s.slice(p + 1, end).replace(/[^0-9A-Fa-f]/g, '');
+      let out = '';
+      for (let i = 0; i < hex.length; i += 2) out += String.fromCharCode(parseInt((hex.substr(i, 2) + '0').slice(0, 2), 16));
+      this.p = end + 1;
+      return new PStr(out);
+    }
+    if (c === '>') { if (s[p + 1] === '>') { this.p = p + 2; return '>>'; } this.p = p + 1; return new POp('>'); }
+    if (c === '(') return this.readLiteral();
+    if (c === '/') {
+      let q = p + 1;
+      while (q < this.n) { const cc = s.charCodeAt(q); if (isWS(cc) || isDelim(cc)) break; q++; }
+      let name = s.slice(p + 1, q);
+      if (name.indexOf('#') >= 0) name = name.replace(/#([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+      this.p = q;
+      return new PName(name);
+    }
+    let q = p;
+    while (q < this.n) { const cc = s.charCodeAt(q); if (isWS(cc) || isDelim(cc)) break; q++; }
+    if (q === p) { this.p = p + 1; return new POp(c); }
+    const tok = s.slice(p, q);
+    this.p = q;
+    if (NUM_RE.test(tok)) return parseFloat(tok);
+    return new POp(tok);
+  }
+  readLiteral() {
+    const s = this.s; let p = this.p + 1, depth = 1, out = '';
+    while (p < this.n) {
+      const c = s[p];
+      if (c === '\\') {
+        const d = s[p + 1];
+        if (d === undefined) { p++; break; }
+        if (d === 'n') { out += '\n'; p += 2; }
+        else if (d === 'r') { out += '\r'; p += 2; }
+        else if (d === 't') { out += '\t'; p += 2; }
+        else if (d === 'b') { out += '\b'; p += 2; }
+        else if (d === 'f') { out += '\f'; p += 2; }
+        else if (d === '\r') { p += 2; if (s[p] === '\n') p++; }
+        else if (d === '\n') { p += 2; }
+        else if (d >= '0' && d <= '7') {
+          let k = p + 1, oct = '';
+          while (k < this.n && oct.length < 3 && s[k] >= '0' && s[k] <= '7') oct += s[k++];
+          out += String.fromCharCode(parseInt(oct, 8) & 0xFF); p = k;
+        } else { out += d; p += 2; }
+      } else if (c === '(') { depth++; out += c; p++; }
+      else if (c === ')') { depth--; p++; if (depth === 0) break; out += c; }
+      else { out += c; p++; }
+    }
+    this.p = p;
+    return new PStr(out);
+  }
+  parseObject() { return this.fromToken(this.next(), 0); }
+  fromToken(t, depth) {
+    if (t === EOF) throw new Error('eof');
+    if (depth > 80) throw new Error('deep');
+    if (typeof t === 'number') {
+      if (this.allowRef && Number.isInteger(t) && t >= 0) {
+        const save = this.p;
+        const t2 = this.next();
+        if (typeof t2 === 'number' && Number.isInteger(t2)) {
+          const t3 = this.next();
+          if (t3 instanceof POp && t3.op === 'R') return new PRef(t, t2);
+        }
+        this.p = save;
+      }
+      return t;
+    }
+    if (t === '[') {
+      const arr = [];
+      for (;;) {
+        const x = this.next();
+        if (x === ']' || x === EOF) break;
+        arr.push(this.fromToken(x, depth + 1));
+      }
+      return arr;
+    }
+    if (t === '<<') {
+      const d = new PDict();
+      for (;;) {
+        const k = this.next();
+        if (k === '>>' || k === EOF) break;
+        if (!(k instanceof PName)) continue;
+        const vt = this.next();
+        if (vt === '>>') { d.set(k.n, null); break; }
+        d.set(k.n, this.fromToken(vt, depth + 1));
+      }
+      return d;
+    }
+    if (t instanceof POp) {
+      if (t.op === 'true') return true;
+      if (t.op === 'false') return false;
+      if (t.op === 'null') return null;
+    }
+    return t;
+  }
+}
+
+/* ファイル全体を文字列にせず、バイトのまま探す（全員分が1つになった大きなPDFでも、iPadのメモリを使いすぎないため） */
+const asBytes = s => Array.from(s, c => c.charCodeAt(0));
+const PAT_OBJ = asBytes('obj'), PAT_ENDSTREAM = asBytes('endstream'), PAT_TRAILER = asBytes('trailer'), PAT_PDF = asBytes('%PDF');
+function findBytes(u8, pat, from) {
+  const first = pat[0], n = pat.length;
+  let i = from;
+  for (;;) {
+    i = u8.indexOf(first, i);
+    if (i < 0 || i + n > u8.length) return -1;
+    let k = 1;
+    while (k < n && u8[i + k] === pat[k]) k++;
+    if (k === n) return i;
+    i++;
+  }
+}
+const startsWithBytes = (u8, at, pat) => pat.every((b, k) => u8[at + k] === b);
+const isDigitB = b => b >= 0x30 && b <= 0x39;
+// 「12 0 obj」の「obj」の位置から、オブジェクト番号を読む（見つからなければ -1）
+function readObjHeader(u8, i) {
+  let p = i - 1;
+  if (p < 0 || !isWS(u8[p])) return -1;
+  while (p >= 0 && isWS(u8[p])) p--;
+  const genEnd = p;
+  while (p >= 0 && isDigitB(u8[p])) p--;
+  if (p === genEnd || p < 0 || !isWS(u8[p])) return -1;
+  while (p >= 0 && isWS(u8[p])) p--;
+  const numEnd = p;
+  while (p >= 0 && isDigitB(u8[p])) p--;
+  if (p === numEnd) return -1;
+  if (p >= 0 && !isWS(u8[p]) && !isDelim(u8[p])) return -1;
+  const after = u8[i + 3];
+  if (after !== undefined && !isWS(after) && !isDelim(after)) return -1;
+  return parseInt(bytesToStr(u8.subarray(p + 1, numEnd + 1)), 10);
+}
+// start の位置から値を1つ読む。足りなければ読む範囲を広げてやり直す
+function parseAt(u8, start, allowRef) {
+  let len = Math.min(u8.length - start, 4096);
+  for (;;) {
+    const str = bytesToStr(u8.subarray(start, start + len));
+    const lx = new Lexer(str, 0, allowRef);
+    let val = null, ok = false;
+    try { val = lx.parseObject(); lx.skipWS(); ok = true; } catch (e) { ok = false; }
+    const more = start + len < u8.length;
+    if ((!ok || lx.p + 32 > str.length) && more && len < 16 * 1024 * 1024) { len = Math.min(u8.length - start, len * 4); continue; }
+    if (!ok) throw new Error('parse');
+    return { val, str, p: lx.p };
+  }
+}
+function pdfDate(ps) {
+  if (!(ps instanceof PStr)) return null;
+  const m = /D:(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?([Zz+\-])?(\d{2})?'?(\d{2})?/.exec(ps.s);
+  if (!m) return null;
+  const Y = +m[1], Mo = +(m[2] || 1), D = +(m[3] || 1), h = +(m[4] || 0), mi = +(m[5] || 0), s = +(m[6] || 0);
+  if (!m[7]) return new Date(Y, Mo - 1, D, h, mi, s);
+  let t = Date.UTC(Y, Mo - 1, D, h, mi, s);
+  const off = (+(m[8] || 0) * 60 + +(m[9] || 0)) * 60000;
+  if (m[7] === '+') t -= off; else if (m[7] === '-') t += off;
+  return new Date(t);
+}
+
+async function openPdf(u8) {
+  if (findBytes(u8.subarray(0, 1024), PAT_PDF, 0) < 0) throw new Error('notpdf');
+
+  // オブジェクトを先頭から順に拾う（ストリームの中身＝写真などは飛ばす）
+  const objs = new Map();
+  let pos = 0;
+  for (;;) {
+    const i = findBytes(u8, PAT_OBJ, pos);
+    if (i < 0) break;
+    pos = i + 3;
+    const num = readObjHeader(u8, i);
+    if (num < 0) continue;
+    let r;
+    try { r = parseAt(u8, i + 3); } catch (e) { continue; }
+    const ent = { num, val: r.val, ss: -1, se: -1 };
+    if (r.str.startsWith('stream', r.p)) {
+      let p = i + 3 + r.p + 6;
+      if (u8[p] === 0x0D) p++;
+      if (u8[p] === 0x0A) p++;
+      let end = -1;
+      const L = r.val instanceof PDict ? r.val.get('Length') : undefined;
+      if (typeof L === 'number' && L >= 0 && p + L <= u8.length) {
+        let k = p + L;
+        while (k < u8.length && isWS(u8[k])) k++;
+        if (startsWithBytes(u8, k, PAT_ENDSTREAM)) end = p + L;
+      }
+      if (end < 0) {
+        const k = findBytes(u8, PAT_ENDSTREAM, p);
+        end = k < 0 ? u8.length : k;
+        if (end > p && u8[end - 1] === 0x0A) end--;
+        if (end > p && u8[end - 1] === 0x0D) end--;
+      }
+      ent.ss = p; ent.se = end;
+      pos = Math.max(pos, end + 9);
+    } else {
+      pos = Math.max(pos, i + 3 + r.p);
+    }
+    objs.set(num, ent);
+  }
+
+  const resolve = (v) => {
+    let n = 0;
+    while (v instanceof PRef && n++ < 32) { const e = objs.get(v.num); v = e ? e.val : null; }
+    return v;
+  };
+
+  const streamBytes = async (ent) => {
+    if (!ent || ent.ss < 0 || !(ent.val instanceof PDict)) return null;
+    let data = u8.subarray(ent.ss, Math.max(ent.ss, ent.se));
+    const f = resolve(ent.val.get('Filter'));
+    if (f == null) return data;
+    const list = Array.isArray(f) ? f.map(resolve) : [f];
+    for (const x of list) {
+      const fn = nameOf(x);
+      if (fn === 'FlateDecode' || fn === 'Fl') { data = await inflate(data); if (!data) return null; }
+      else return null;
+    }
+    return data;
+  };
+
+  // まとめて圧縮されたオブジェクト（オブジェクトストリーム）
+  for (const ent of Array.from(objs.values())) {
+    if (ent.ss < 0 || !(ent.val instanceof PDict) || nameOf(ent.val.get('Type')) !== 'ObjStm') continue;
+    const data = await streamBytes(ent);
+    if (!data) continue;
+    const s2 = bytesToStr(data);
+    const N = resolve(ent.val.get('N')) | 0, first = resolve(ent.val.get('First')) | 0;
+    const lx = new Lexer(s2, 0, false);
+    const pairs = [];
+    for (let i = 0; i < N; i++) {
+      const a = lx.next(), b = lx.next();
+      if (typeof a !== 'number' || typeof b !== 'number') break;
+      pairs.push([a, b]);
+    }
+    for (const [onum, off] of pairs) {
+      if (objs.has(onum)) continue;
+      try { objs.set(onum, { num: onum, val: new Lexer(s2, first + off).parseObject(), ss: -1, se: -1 }); } catch (e) { /* 読めないものは飛ばす */ }
+    }
+  }
+
+  // 目次（Root）・作成日時（Info）・暗号化の有無
+  let rootRef = null, infoRef = null, encrypted = false;
+  const takeTrailer = d => {
+    if (!(d instanceof PDict)) return;
+    if (d.get('Root') instanceof PRef) rootRef = d.get('Root');
+    if (d.get('Info') instanceof PRef) infoRef = d.get('Info');
+    if (d.has('Encrypt')) encrypted = true;
+  };
+  for (let tp = 0; ;) {
+    const i = findBytes(u8, PAT_TRAILER, tp);
+    if (i < 0) break;
+    tp = i + 7;
+    try { takeTrailer(parseAt(u8, i + 7).val); } catch (e) { /* 次へ */ }
+  }
+  if (!rootRef) for (const ent of objs.values()) if (ent.val instanceof PDict && nameOf(ent.val.get('Type')) === 'XRef') takeTrailer(ent.val);
+  if (encrypted) throw new Error('encrypted');
+  const info = resolve(infoRef);
+  const created = info instanceof PDict ? (pdfDate(resolve(info.get('CreationDate'))) || pdfDate(resolve(info.get('ModDate')))) : null;
+  let root = resolve(rootRef);
+  if (!(root instanceof PDict)) {
+    for (const ent of objs.values()) if (ent.val instanceof PDict && nameOf(ent.val.get('Type')) === 'Catalog') root = ent.val;
+  }
+
+  const pages = () => {
+    const out = [], seen = new Set();
+    const walk = (ref, inhRes, depth) => {
+      if (depth > 60) return;
+      if (ref instanceof PRef) { if (seen.has(ref.num)) return; seen.add(ref.num); }
+      const node = resolve(ref);
+      if (!(node instanceof PDict)) return;
+      const res = node.has('Resources') ? node.get('Resources') : inhRes;
+      const kids = resolve(node.get('Kids'));
+      if (Array.isArray(kids) && nameOf(node.get('Type')) !== 'Page') { for (const k of kids) walk(k, res, depth + 1); }
+      else out.push({ dict: node, res: resolve(res) });
+    };
+    if (root instanceof PDict) walk(root.get('Pages'), null, 0);
+    if (!out.length) {
+      for (const ent of objs.values()) {
+        if (ent.val instanceof PDict && nameOf(ent.val.get('Type')) === 'Page') out.push({ dict: ent.val, res: resolve(ent.val.get('Resources')) });
+      }
+    }
+    return out;
+  };
+
+  return { u8, objs, resolve, streamBytes, pages, created };
+}
+
+/* ---------- 文字の対応表（ToUnicode）を読む ---------- */
+function hexUnits(h) {
+  h = h.replace(/\s+/g, '');
+  if (h.length <= 2) return [parseInt(h || '0', 16)];
+  const u = [];
+  for (let i = 0; i < h.length; i += 4) u.push(parseInt((h.substr(i, 4) + '000').slice(0, 4), 16));
+  return u;
+}
+const VS_RE = /[︀-️]|\uDB40[\uDD00-\uDDEF]/g;
+const unitsToStr = u => String.fromCharCode.apply(null, u).replace(VS_RE, '');
+function parseToUnicode(str) {
+  const map = new Map();
+  let m;
+  const reChar = /beginbfchar([\s\S]*?)endbfchar/g;
+  while ((m = reChar.exec(str)) !== null) {
+    const re2 = /<([0-9A-Fa-f\s]+)>\s*<([0-9A-Fa-f\s]*)>/g;
+    let r;
+    while ((r = re2.exec(m[1])) !== null) map.set(parseInt(r[1].replace(/\s+/g, ''), 16), unitsToStr(hexUnits(r[2])));
+  }
+  const reRange = /beginbfrange([\s\S]*?)endbfrange/g;
+  while ((m = reRange.exec(str)) !== null) {
+    const re3 = /<([0-9A-Fa-f\s]+)>\s*<([0-9A-Fa-f\s]+)>\s*(?:<([0-9A-Fa-f\s]*)>|\[([^\]]*)\])/g;
+    let r;
+    while ((r = re3.exec(m[1])) !== null) {
+      const lo = parseInt(r[1].replace(/\s+/g, ''), 16), hi = parseInt(r[2].replace(/\s+/g, ''), 16);
+      if (!(hi >= lo) || hi - lo > 65535) continue;
+      if (r[3] !== undefined) {
+        const base = hexUnits(r[3]);
+        for (let c = lo; c <= hi; c++) { const u = base.slice(); u[u.length - 1] += c - lo; map.set(c, unitsToStr(u)); }
+      } else {
+        const items = r[4].match(/<[0-9A-Fa-f\s]*>/g) || [];
+        items.forEach((it, k) => { if (lo + k <= hi) map.set(lo + k, unitsToStr(hexUnits(it.slice(1, -1)))); });
+      }
+    }
+  }
+  return map;
+}
+
+function parseW(arr, resolve) {
+  const map = new Map();
+  let i = 0;
+  while (i < arr.length) {
+    const first = resolve(arr[i]);
+    const next = resolve(arr[i + 1]);
+    if (typeof first !== 'number') break;
+    if (Array.isArray(next)) { next.forEach((w, k) => map.set(first + k, +resolve(w) || 0)); i += 2; }
+    else {
+      const last = next, w = +resolve(arr[i + 2]) || 0;
+      if (typeof last !== 'number' || last - first > 70000) break;
+      for (let c = first; c <= last; c++) map.set(c, w);
+      i += 3;
+    }
+  }
+  return map;
+}
+
+/* ---------- フォント ---------- */
+const WIN1252 = '€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008dŽ\u008f\u0090‘’“”•–—˜™š›œ\u009džŸ';
+let sjisDecoder = null;
+
+async function loadFont(pdf, ref, cache) {
+  const key = ref instanceof PRef ? 'r' + ref.num : null;
+  const d = pdf.resolve(ref);
+  if (key && cache.has(key)) return cache.get(key);
+  if (!key && d && cache.has(d)) return cache.get(d);
+  const fi = { cid: false, japan1: false, predef: '', toU: null, wmap: null, dw: 1000, wArr: null, first: 0, missing: 0 };
+  if (d instanceof PDict) {
+    const tu = d.get('ToUnicode');
+    if (tu instanceof PRef) {
+      const b = await pdf.streamBytes(pdf.objs.get(tu.num));
+      if (b) fi.toU = parseToUnicode(bytesToStr(b));
+    }
+    if (nameOf(pdf.resolve(d.get('Subtype'))) === 'Type0') {
+      fi.cid = true;
+      const en = nameOf(pdf.resolve(d.get('Encoding')));
+      if (/UCS2|UTF16/i.test(en)) fi.predef = 'utf16';
+      else if (/RKSJ/i.test(en)) fi.predef = 'sjis';
+      const df = pdf.resolve(d.get('DescendantFonts'));
+      const desc = pdf.resolve(Array.isArray(df) ? df[0] : null);
+      if (desc instanceof PDict) {
+        const csi = pdf.resolve(desc.get('CIDSystemInfo'));
+        const ord = csi instanceof PDict ? pdf.resolve(csi.get('Ordering')) : null;
+        fi.japan1 = ord instanceof PStr && /Japan1/i.test(ord.s);
+        const dw = pdf.resolve(desc.get('DW'));
+        if (typeof dw === 'number') fi.dw = dw;
+        const W = pdf.resolve(desc.get('W'));
+        if (Array.isArray(W)) fi.wmap = parseW(W, pdf.resolve);
+      }
+    } else {
+      const fc = pdf.resolve(d.get('FirstChar'));
+      if (typeof fc === 'number') fi.first = fc;
+      const ws = pdf.resolve(d.get('Widths'));
+      if (Array.isArray(ws)) fi.wArr = ws.map(x => +pdf.resolve(x) || 0);
+      const fd = pdf.resolve(d.get('FontDescriptor'));
+      if (fd instanceof PDict) { const mw = pdf.resolve(fd.get('MissingWidth')); if (typeof mw === 'number') fi.missing = mw; }
+    }
+  }
+  cache.set(key || d, fi);
+  return fi;
+}
+
+// 文字列（バイト）を [文字コード, 文字] の並びにする
+function decodeShow(fi, s) {
+  const out = [];
+  if (fi.cid && fi.predef === 'sjis') {
+    if (!sjisDecoder) sjisDecoder = new TextDecoder('shift_jis');
+    for (let i = 0; i < s.length; i++) {
+      const b = s.charCodeAt(i) & 0xFF;
+      const two = ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC)) && i + 1 < s.length;
+      const bytes = two ? [b, s.charCodeAt(i + 1) & 0xFF] : [b];
+      const code = two ? (b << 8) | bytes[1] : b;
+      if (two) i++;
+      const ch = fi.toU && fi.toU.has(code) ? fi.toU.get(code) : sjisDecoder.decode(new Uint8Array(bytes));
+      out.push([code, ch]);
+    }
+    return out;
+  }
+  if (fi.cid) {
+    for (let i = 0; i + 1 < s.length; i += 2) {
+      const code = ((s.charCodeAt(i) & 0xFF) << 8) | (s.charCodeAt(i + 1) & 0xFF);
+      let ch;
+      if (fi.toU && fi.toU.has(code) && fi.toU.get(code) !== '') ch = fi.toU.get(code);
+      else if (fi.predef === 'utf16') {
+        if (code >= 0xD800 && code <= 0xDBFF && i + 3 < s.length) {
+          const lo = ((s.charCodeAt(i + 2) & 0xFF) << 8) | (s.charCodeAt(i + 3) & 0xFF);
+          ch = String.fromCharCode(code, lo); i += 2;
+        } else ch = String.fromCharCode(code);
+      } else if (fi.japan1) ch = aj1(code);
+      else ch = '';
+      out.push([code, ch]);
+    }
+    return out;
+  }
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i) & 0xFF;
+    let ch = fi.toU ? fi.toU.get(code) : undefined;
+    if (ch === undefined) ch = code >= 0x80 && code < 0xA0 ? WIN1252[code - 0x80] : String.fromCharCode(code);
+    out.push([code, ch]);
+  }
+  return out;
+}
+
+function widthOf(fi, code) {
+  if (fi.cid && !fi.predef && !fi.wmap && fi.japan1) {
+    // GoodNotesのPDFには文字の幅の情報がないので、Adobe-Japan1の文字番号のまとまりからおおよその幅を決める
+    // （1〜230：英数字・記号＝やや狭い、231〜632：半角＝半分、それ以外：全角）
+    return code === 1 ? 250 : code < 231 ? 550 : code < 633 ? 500 : 1000;
+  }
+  if (fi.cid) return fi.predef ? fi.dw : (fi.wmap && fi.wmap.has(code) ? fi.wmap.get(code) : fi.dw);
+  if (fi.wArr) { const w = fi.wArr[code - fi.first]; return w === undefined ? fi.missing : w; }
+  return 500;
+}
+
+/* ---------- ページの描画命令をたどって、文字の位置と写真を集める ---------- */
+function mul(a, b) {
+  return [
+    a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3],
+    a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3],
+    a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5],
+  ];
+}
+const nums = (ops, n) => { const a = ops.slice(-n); return a.length === n && a.every(x => typeof x === 'number') ? a : null; };
+
+function skipInlineImage(lx) {
+  for (;;) { const t = lx.next(); if (t === EOF) return; if (t instanceof POp && t.op === 'ID') break; }
+  const re = /[\x00\t\n\f\r ]EI(?=[\x00\t\n\f\r \/\[<(%]|$)/g;
+  re.lastIndex = lx.p + 1;
+  const m = re.exec(lx.s);
+  lx.p = m ? m.index + 3 : lx.s.length;
+}
+
+async function interpret(pdf, content, resources, ctm0, ctx, depth, gs0) {
+  const lx = new Lexer(content, 0, false);
+  const ops = [];
+  let gs = gs0 ? Object.assign({}, gs0, { ctm: ctm0.slice() }) : { ctm: ctm0.slice(), font: null, fs: 1, tc: 0, tw: 0, th: 1, tl: 0 };
+  const stack = [];
+  let tm = [1, 0, 0, 1, 0, 0], tlm = [1, 0, 0, 1, 0, 0];
+  const res = resources instanceof PDict ? resources : null;
+  const fontsDict = res ? pdf.resolve(res.get('Font')) : null;
+  const xobjDict = res ? pdf.resolve(res.get('XObject')) : null;
+
+  const show = (ps) => {
+    if (!(ps instanceof PStr) || !gs.font) return;
+    const fi = gs.font;
+    const trm = mul(tm, gs.ctm);
+    let text = '', adv = 0;
+    for (const [code, ch] of decodeShow(fi, ps.s)) {
+      text += ch;
+      adv += ((widthOf(fi, code) / 1000) * gs.fs + gs.tc + (!fi.cid && code === 32 ? gs.tw : 0)) * gs.th;
+    }
+    tm = mul([1, 0, 0, 1, adv, 0], tm);
+    const trm2 = mul(tm, gs.ctm);
+    ctx.runs.push({ x0: trm[4], y0: trm[5], x1: trm2[4], size: Math.abs(gs.fs) * Math.hypot(trm[2], trm[3]), text, blk: ctx.blk });
+  };
+  const nextLine = () => { tlm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); tm = tlm.slice(); };
+
+  const doXObject = async (name) => {
+    if (!(xobjDict instanceof PDict)) return;
+    const ref = xobjDict.get(name);
+    const ent = ref instanceof PRef ? pdf.objs.get(ref.num) : null;
+    if (!ent || !(ent.val instanceof PDict)) return;
+    const sub = nameOf(pdf.resolve(ent.val.get('Subtype')));
+    if (sub === 'Image') {
+      const c = gs.ctm;
+      const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => [c[0] * u + c[2] * v + c[4], c[1] * u + c[3] * v + c[5]]);
+      const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+      const f = pdf.resolve(ent.val.get('Filter'));
+      const fl = (Array.isArray(f) ? f.map(pdf.resolve) : [f]).map(nameOf);
+      ctx.images.push({
+        w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys),
+        m: c.slice(0, 4), ss: ent.ss, se: ent.se,
+        dct: fl.length === 1 && (fl[0] === 'DCTDecode' || fl[0] === 'DCT'),
+      });
+    } else if (sub === 'Form' && depth < 6) {
+      const bytes = await pdf.streamBytes(ent);
+      if (!bytes) return;
+      const mx = pdf.resolve(ent.val.get('Matrix'));
+      const fm = Array.isArray(mx) && mx.length === 6 && mx.every(x => typeof x === 'number') ? mx : [1, 0, 0, 1, 0, 0];
+      const fres = pdf.resolve(ent.val.get('Resources'));
+      await interpret(pdf, bytesToStr(bytes), fres instanceof PDict ? fres : res, mul(fm, gs.ctm), ctx, depth + 1, gs);
+    }
+  };
+
+  for (;;) {
+    const t = lx.next();
+    if (t === EOF) break;
+    if (!(t instanceof POp)) {
+      ops.push(t === '[' || t === '<<' ? lx.fromToken(t, 0) : t);
+      if (ops.length > 64) ops.splice(0, ops.length - 64);
+      continue;
+    }
+    let a;
+    switch (t.op) {
+      case 'q': stack.push(Object.assign({}, gs, { ctm: gs.ctm.slice() })); break;
+      case 'Q': if (stack.length) gs = stack.pop(); break;
+      case 'cm': if ((a = nums(ops, 6))) gs.ctm = mul(a, gs.ctm); break;
+      case 'BT': tm = [1, 0, 0, 1, 0, 0]; tlm = [1, 0, 0, 1, 0, 0]; ctx.blk = (ctx.blk || 0) + 1; break;
+      case 'Tf': {
+        const nm = ops[ops.length - 2], sz = ops[ops.length - 1];
+        if (nm instanceof PName && fontsDict instanceof PDict && fontsDict.has(nm.n)) gs.font = await loadFont(pdf, fontsDict.get(nm.n), ctx.fontCache);
+        else gs.font = null;
+        gs.fs = typeof sz === 'number' ? sz : 1;
+        break;
+      }
+      case 'Tc': if ((a = nums(ops, 1))) gs.tc = a[0]; break;
+      case 'Tw': if ((a = nums(ops, 1))) gs.tw = a[0]; break;
+      case 'Tz': if ((a = nums(ops, 1))) gs.th = a[0] / 100; break;
+      case 'TL': if ((a = nums(ops, 1))) gs.tl = a[0]; break;
+      case 'Td': if ((a = nums(ops, 2))) { tlm = mul([1, 0, 0, 1, a[0], a[1]], tlm); tm = tlm.slice(); } break;
+      case 'TD': if ((a = nums(ops, 2))) { gs.tl = -a[1]; tlm = mul([1, 0, 0, 1, a[0], a[1]], tlm); tm = tlm.slice(); } break;
+      case 'Tm': if ((a = nums(ops, 6))) { tlm = a; tm = a.slice(); } break;
+      case 'T*': nextLine(); break;
+      case 'Tj': show(ops[ops.length - 1]); break;
+      case "'": nextLine(); show(ops[ops.length - 1]); break;
+      case '"': if ((a = nums(ops.slice(0, -1), 2))) { gs.tw = a[0]; gs.tc = a[1]; } nextLine(); show(ops[ops.length - 1]); break;
+      case 'TJ': {
+        const arr = ops[ops.length - 1];
+        if (Array.isArray(arr)) {
+          for (const el of arr) {
+            if (el instanceof PStr) show(el);
+            else if (typeof el === 'number') tm = mul([1, 0, 0, 1, (-el / 1000) * gs.fs * gs.th, 0], tm);
+          }
+        }
+        break;
+      }
+      case 'Do': { const nm = ops[ops.length - 1]; if (nm instanceof PName) await doXObject(nm.n); break; }
+      case 'BI': skipInlineImage(lx); break;
+      default: break;
+    }
+    ops.length = 0;
+  }
+}
+
+// 文字のかたまりを、上から順の「行」にまとめる
+function buildLines(runs) {
+  const rs = runs.filter(r => r.text && /\S/.test(r.text.replace(/[ ​﻿]/g, '')));
+  rs.sort((a, b) => (b.y0 - a.y0) || (a.x0 - b.x0));
+  const lines = [];
+  for (const r of rs) {
+    let line = null;
+    for (const l of lines) { if (Math.abs(l.y - r.y0) <= 0.45 * Math.max(l.size, r.size, 1)) { line = l; break; } }
+    if (!line) { line = { y: r.y0, size: r.size, runs: [] }; lines.push(line); }
+    line.runs.push(r);
+  }
+  for (const l of lines) {
+    l.runs.sort((a, b) => a.x0 - b.x0);
+    let text = '', prevEnd = null, prev = null;
+    for (const r of l.runs) {
+      if (prev) {
+        const gap = r.x0 - prevEnd;
+        // 同じ高さでも、別の文字ボックス（2列目など）から来た文字や大きく離れた文字は、別の項目として区切る（タブで区切る）
+        if ((r.blk !== prev.blk && gap > 0.3 * l.size) || gap > 2 * l.size) text += '\t';
+        else if (gap > 0.25 * l.size) text += ' ';
+      }
+      text += r.text;
+      prevEnd = prevEnd === null ? r.x1 : Math.max(prevEnd, r.x1);
+      prev = r;
+    }
+    l.text = text;
+  }
+  lines.sort((a, b) => b.y - a.y);
+  return lines;
+}
+
+async function extractPage(pdf, page, fontCache) {
+  const ctx = { runs: [], images: [], fontCache };
+  const c = page.dict.get('Contents');
+  const rc = pdf.resolve(c);
+  const refs = Array.isArray(rc) ? rc : [c];
+  const parts = [];
+  for (const r of refs) {
+    const ent = r instanceof PRef ? pdf.objs.get(r.num) : null;
+    const b = ent ? await pdf.streamBytes(ent) : null;
+    if (b) parts.push(bytesToStr(b));
+  }
+  await interpret(pdf, parts.join('\n'), page.res, [1, 0, 0, 1, 0, 0], ctx, 0, null);
+  return { lines: buildLines(ctx.runs), images: ctx.images };
+}
+
+/* =========================================================
+   3. カードの中身を読み分ける
+   ========================================================= */
+const DATE_RE = /^(\d{1,2})\s*[\/月]\s*(\d{1,2})\s*日?\s*(?:\(\s*[月火水木金土日]\s*\))?\s*(.*)$/;
+// 生年月日は、和暦（470314、S47.3.14）でも西暦（19720314、1972.3.14）でも、両方を並べて書いてあっても読み取る
+const B_PRE = '(^|[^\\d.\\/・-])[(\\[]?\\s*', B_POST = '\\s*[)\\]]?\\s*$';
+const BIRTH_RES = [
+  ['w', new RegExp(B_PRE + '()((?:18|19|20)\\d{2})(\\d{2})(\\d{2})' + B_POST)],
+  ['w', new RegExp(B_PRE + '()((?:18|19|20)\\d{2})\\s*[.\\/・年-]\\s*(\\d{1,2})\\s*[.\\/・月-]\\s*(\\d{1,2})\\s*日?' + B_POST)],
+  ['j', new RegExp(B_PRE + '(' + ERA_CLASS + ')?\\s*(\\d{1,2})\\s*[.\\/・年-]\\s*(\\d{1,2})\\s*[.\\/・月-]\\s*(\\d{1,2})\\s*日?' + B_POST)],
+  ['j', new RegExp(B_PRE + '(' + ERA_CLASS + ')?\\s*(\\d{2})(\\d{2})(\\d{2})' + B_POST)],
+];
+const ERA_MAP = { 明: 'M', 大: 'T', 昭: 'S', 平: 'H', 令: 'R' };
+const ERA_BASE = { M: 1867, T: 1911, S: 1925, H: 1988, R: 2018 };
+// 西暦の日付から和暦（元号と年）を求める
+function toWareki(y, mm, dd) {
+  const n = y * 10000 + mm * 100 + dd;
+  const era = n >= 20190501 ? 'R' : n >= 19890108 ? 'H' : n >= 19261225 ? 'S' : n >= 19120730 ? 'T' : 'M';
+  return { era, yy: y - ERA_BASE[era] };
+}
+
+function isDateLine(n) {
+  const m = DATE_RE.exec(n);
+  return !!m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31;
+}
+// 文の終わりにある生年月日を1つ取り出す
+function peelBirth(rest) {
+  for (const [kind, re] of BIRTH_RES) {
+    const m = re.exec(rest);
+    if (!m) continue;
+    const yy = +m[3], mm = +m[4], dd = +m[5];
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) continue;
+    return { kind, era: m[2] ? (ERA_MAP[m[2]] || m[2].toUpperCase()) : '', yy, mm, dd, rest: rest.slice(0, m.index + m[1].length).trim() };
+  }
+  return null;
+}
+// birth = { era, yy, mm, dd（和暦）, y（西暦の年。わからなければ null）, src（書き方 w:西暦 j:和暦 wj:両方） }
+function takeBirth(rest) {
+  const a = peelBirth(rest);
+  if (!a) return null;
+  let w = a.kind === 'w' ? a : null, j = a.kind === 'j' ? a : null, out = a.rest;
+  const b = peelBirth(a.rest);
+  if (b && b.kind !== a.kind) { if (b.kind === 'w') w = b; else j = b; out = b.rest; }
+  if (w) {
+    const k = toWareki(w.yy, w.mm, w.dd);
+    const mismatch = !!j && (j.yy !== k.yy || j.mm !== w.mm || j.dd !== w.dd || (j.era && j.era !== k.era));
+    return { birth: { era: k.era, yy: k.yy, mm: w.mm, dd: w.dd, y: w.yy, src: j ? 'wj' : 'w' }, rest: out, mismatch };
+  }
+  return { birth: { era: j.era, yy: j.yy, mm: j.mm, dd: j.dd, y: ERA_BASE[j.era] ? ERA_BASE[j.era] + j.yy : null, src: 'j' }, rest: out, mismatch: false };
+}
+
+// 薬の行を1剤ずつに分ける（2列に並べた薬や、スペース2つ以上で区切った薬を別々にする）
+const QTY_RE = /^[\d.\/×x*~〜()-]+\s*(錠|t|c|包|個|本|枚|キット|日分|日)?$/i;
+function splitDrugs(lines) {
+  const out = [];
+  for (const line of lines) {
+    const segs = [];
+    for (const p of line.split('\t').map(x => x.trim()).filter(Boolean)) {
+      // 「メーカー」だけ・数量だけの部分は、前の薬にくっつける
+      if (segs.length && /^[「(]/.test(p)) segs[segs.length - 1] += p;
+      else if (segs.length && QTY_RE.test(p)) segs[segs.length - 1] += ' ' + p;
+      else segs.push(p);
+    }
+    out.push(...segs);
+  }
+  return out.filter(x => /[\p{L}\p{N}]/u.test(x));
+}
+const untab = x => x.replace(/\t/g, ' ').replace(/ {2,}/g, ' ').trim();
+
+function parseCardText(lineTexts) {
+  const items = [];
+  for (const raw of lineTexts) {
+    // スペース2つ以上やタブは「区切り」（タブ）として残し、それ以外のスペースは1つにそろえる
+    const n = raw.replace(/[\u200a\u200b\ufeff]/g, '').normalize('NFKC')
+      .replace(/[ \u00a0]{2,}/g, '\t').replace(/[ \u00a0]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
+    if (!/[\p{L}\p{N}]/u.test(n)) continue;
+    // 折り返しで「「ニプロ」」などが次の行に回ったときは、前の行につなげる
+    if (items.length && /^[「(]/.test(n) && !isDateLine(items[items.length - 1])) items[items.length - 1] += n;
+    else items.push(n);
+  }
+  const r = { month: null, day: null, name: '', kana: '', birth: null, hospital: '', drugs: [], issues: [], warns: [] };
+  if (!items.length) { r.issues.push('文字がありません（写真だけのページ）'); return r; }
+  const di = items.findIndex(isDateLine);
+  if (di < 0) {
+    r.issues.push('来局予想日の行が見つかりません');
+    r.drugs = splitDrugs(items);
+    return r;
+  }
+  r.hospital = items.slice(0, di).map(untab).join(' ');
+  const m = DATE_RE.exec(items[di]);
+  r.month = +m[1]; r.day = +m[2];
+  let rest = untab(m[3]);
+  let drugStart = di + 1;
+  // 日付だけの行で、次の行に氏名がある場合
+  if (!rest && items[di + 1] && (/\(.*\)/.test(items[di + 1]) || takeBirth(untab(items[di + 1])))) { rest = untab(items[di + 1]); drugStart = di + 2; }
+  const b = takeBirth(rest);
+  if (b) { r.birth = b.birth; rest = b.rest; if (b.mismatch) r.warns.push('生年月日の西暦と和暦が合っていません'); }
+  const km = /\(([^()]*)\)/.exec(rest);
+  if (km) { r.kana = km[1].replace(/\s+/g, ' ').trim(); rest = (rest.slice(0, km.index) + ' ' + rest.slice(km.index + km[0].length)).trim(); }
+  r.name = rest.replace(/\s+/g, ' ').trim();
+  r.drugs = splitDrugs(items.slice(drugStart));
+  if (!r.name) r.issues.push('氏名が読み取れません');
+  if (!r.drugs.length) r.issues.push('薬の行がありません');
+  if (!r.birth) r.warns.push('生年月日なし');
+  if (!r.kana) r.warns.push('ふりがななし');
+  if (!r.hospital) r.warns.push('医療機関なし');
+  return r;
+}
+
+/* =========================================================
+   4. 検索のための「そろえた文字」
+   ========================================================= */
+function normKey(s) {
+  return String(s || '').normalize('NFKC').toLowerCase()
+    .replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[\-‐-―−ー]/g, 'ー')
+    .replace(/[\s・·]/g, '');
+}
+function drugKey(s) {
+  return normKey(s).replace(/錠/g, '').replace(/(\d)(?:mg|mcg|μg|ug|ml)/g, '$1');
+}
+function parseDrugQuery(q) {
+  const parts = [];
+  for (const term of String(q).normalize('NFKC').split(/\s+/)) {
+    if (!term) continue;
+    for (const p of (drugKey(term).match(/\d+(?:\.\d+)?|[^\d]+/g) || [])) {
+      const t = p.replace(/^\.+|\.+$/g, '');
+      if (t) parts.push(/^\d/.test(t) ? { num: t } : { txt: t });
+    }
+  }
+  return parts;
+}
+// 数字は「その数字そのもの」だけに当てる（5 で 2.5 や 500 に当たらないように）
+const isD = ch => ch >= '0' && ch <= '9';
+function hasNum(key, n) {
+  for (let i = key.indexOf(n); i >= 0; i = key.indexOf(n, i + 1)) {
+    const b = i > 0 ? key[i - 1] : '', a = key[i + n.length] || '', a2 = key[i + n.length + 1] || '';
+    if (!isD(b) && b !== '.' && !isD(a) && !(a === '.' && isD(a2))) return true;
+  }
+  return false;
+}
+function matchDrug(key, parts) {
+  for (const p of parts) {
+    if (p.txt !== undefined) { if (!key.includes(p.txt)) return false; }
+    else if (!hasNum(key, p.num)) return false;
+  }
+  return true;
+}
+function parsePatientQuery(q) {
+  const out = [];
+  const reBirthSep = new RegExp('^' + ERA_CLASS + '?(\\d{1,4})[.\\/・-](\\d{1,2})[.\\/・-](\\d{1,2})$');
+  const reBirthNum = new RegExp('^' + ERA_CLASS + '?(\\d{2,8})$');
+  for (const term of String(q).normalize('NFKC').split(/\s+/)) {
+    if (!term) continue;
+    let m;
+    if ((m = /^(\d{1,2})\/(\d{1,2})$/.exec(term))) out.push({ visit: [+m[1], +m[2]] });
+    else if ((m = reBirthSep.exec(term))) out.push(m[1].length > 2 ? { birthW: m[1].padStart(4, '0') + pad2(m[2]) + pad2(m[3]) } : { birth: pad2(m[1]) + pad2(m[2]) + pad2(m[3]) });
+    else if ((m = reBirthNum.exec(term))) out.push({ birthPart: m[1] });
+    else { const k = normKey(term); if (k) out.push({ txt: k }); }
+  }
+  return out;
+}
+function matchPatient(c, terms) {
+  return terms.every(t => {
+    if (t.visit) return c.month === t.visit[0] && c.day === t.visit[1];
+    if (t.birth) return c.birthDigits === t.birth;
+    if (t.birthW) return c.birthWs.includes(t.birthW);
+    if (t.birthPart) return c.birthDigits.includes(t.birthPart) || c.birthWs.some(w => w.includes(t.birthPart));
+    return c.nameKey.includes(t.txt) || c.kanaKey.includes(t.txt) || c.hospKey.includes(t.txt);
+  });
+}
+
+/* =========================================================
+   5. 日付
+   ========================================================= */
+function todayMidnight() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+// 年が書かれていないので、今日にいちばん近い日付として扱う
+function inferVisit(c, today) {
+  if (!c.month) return null;
+  let best = null;
+  for (const y of [today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1]) {
+    const d = new Date(y, c.month - 1, c.day);
+    if (d.getMonth() !== c.month - 1) continue;
+    const diff = Math.round((d - today) / 86400000);
+    if (!best || Math.abs(diff) < Math.abs(best.diff) || (Math.abs(diff) === Math.abs(best.diff) && diff > best.diff)) best = { date: d, diff };
+  }
+  return best;
+}
+function relLabel(diff) {
+  if (diff === 0) return '今日';
+  if (diff === 1) return '明日';
+  if (diff === 2) return 'あさって';
+  if (diff > 0) return 'あと' + diff + '日';
+  return (-diff) + '日前（過ぎています）';
+}
+const fmtMD = d => (d.getMonth() + 1) + '/' + d.getDate();
+const fmtYMD = d => d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）';
+// 生年月日は、カードに書いてある暦で表示する（両方書いてあるときは、西暦（和暦））
+function fmtBirth(b) {
+  const md = '.' + pad2(b.mm) + '.' + pad2(b.dd);
+  if (b.src === 'w') return b.y + md;
+  if (b.src === 'wj') return b.y + md + '（' + b.era + b.yy + md + '）';
+  return b.era + b.yy + md;
+}
+const fmtDT = d => (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+// ファイル名から日付を読む（例：予製カード1106.pdf、2026-11-06.pdf、11.6.pdf、11月6日.pdf、R8.11.6.pdf）
+function dateFromName(name, ref) {
+  const base = String(name || '').split('/').pop().replace(/\.(pdf|zip)$/i, '').normalize('NFKC');
+  let m, y = null, mo = 0, d = 0;
+  if ((m = /(20\d{2})[-_.\/年 ]?(\d{1,2})[-_.\/月 ]?(\d{1,2})日?/.exec(base))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /(?:R|令和)\s*(\d{1,2})[-_.\/年 ](\d{1,2})[-_.\/月 ](\d{1,2})日?/i.exec(base))) { y = 2018 + +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /(?:^|\D)(\d{1,2})[-_.\/月](\d{1,2})日?(?:\D|$)/.exec(base))) { mo = +m[1]; d = +m[2]; }
+  else if ((m = /(?:^|\D)(\d{2})(\d{2})(\d{2})(?:\D|$)/.exec(base)) && +m[1] >= 20 && +m[1] <= 39) { y = 2000 + +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /(?:^|\D)(\d{2})(\d{2})(?:\D|$)/.exec(base))) { mo = +m[1]; d = +m[2]; }
+  else return null;
+  if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+  if (y === null) {
+    const v = inferVisit({ month: mo, day: d }, ref || todayMidnight());
+    return v ? v.date : null;
+  }
+  const dt = new Date(y, mo - 1, d);
+  return dt.getMonth() === mo - 1 ? dt : null;
+}
+function fileDate(f) {
+  const r = f.created ? new Date(f.created.getFullYear(), f.created.getMonth(), f.created.getDate()) : null;
+  return dateFromName(f.key, r) || (f.zip ? dateFromName(f.zip, r) : null);
+}
+function parseISODate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+
+/* ↑↑ 共通の読み取り部分はここまで ↑↑ */
+
+/* =========================================================
+   6. 状態とカード
+   ========================================================= */
+const state = {
+  cards: [],        // カード（下の「カード1枚の形」を参照）
+  info: null,       // 今のデータの説明：{ schema, gen, nextId, importedAt, source, updatedThrough, lastExportAt, files }
+  loading: false,
+  limit: 100,
+  photoUrl: null, dlgSeq: 0,
+  exp: null,        // 書き出しの準備ができたファイル：{ file, name, size, cards, photos, missing, at }
+  expUrl: null,
+};
+
+/* カード1枚の形（この端末に記憶する内容）
+   { id: 変わらない番号, name, kana, birth: { era, yy, mm, dd, y, src } または null, hospital,
+     visit: 来局予想日 'YYYY-MM-DD' または null, drugs: ['薬の名前', …], hasPhoto: 写真があるか,
+     updatedAt: 最後に内容が変わった時刻（ミリ秒）, paused: 休止,
+     imp: 取り込み元 { file, page, raw: [PDFから読み取った文字], warns: [取り込み時の注意], photoNote: 写真がない理由 } }
+   検索のための「そろえた文字」や確認事項（issues・warns・dup）は、開くたびに作り直す（記憶しない） */
+const STORED = ['id', 'name', 'kana', 'birth', 'hospital', 'visit', 'drugs', 'hasPhoto', 'updatedAt', 'paused', 'imp'];
+function toRecord(c) { const r = {}; for (const k of STORED) r[k] = c[k]; return r; }
+
+const isoOf = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+// 検索のための「そろえた文字」と、確認事項を付け足す
+function derive(c) {
+  const v = parseISODate(c.visit);
+  c.month = v ? v.getMonth() + 1 : null; c.day = v ? v.getDate() : null;
+  c.birthDigits = c.birth ? pad2(c.birth.yy) + pad2(c.birth.mm) + pad2(c.birth.dd) : '';
+  // 西暦8けたでも探せるようにする。元号が書かれていない和暦は、ありうる元号（昭和・平成・令和・大正）をすべて候補にする
+  c.birthWs = [];
+  if (c.birth) {
+    const b = c.birth, tail = pad2(b.mm) + pad2(b.dd);
+    if (b.y) c.birthWs.push(b.y + tail);
+    else if (!b.era) for (const [e, max] of [['S', 64], ['H', 31], ['R', new Date().getFullYear() - 2018], ['T', 15]]) if (b.yy >= 1 && b.yy <= max) c.birthWs.push((ERA_BASE[e] + b.yy) + tail);
+  }
+  c.nameKey = normKey(c.name); c.kanaKey = normKey(c.kana); c.hospKey = normKey(c.hospital);
+  c.issues = [];
+  if (!c.name && !c.drugs.length && !c.visit) c.issues.push('文字がありません（写真だけのページ）');
+  else {
+    if (!c.visit) c.issues.push('来局予想日がありません');
+    if (!c.name) c.issues.push('氏名がありません');
+    if (!c.drugs.length) c.issues.push('薬がありません');
+  }
+  c.warns = [];
+  if (c.name || c.drugs.length || c.visit) {
+    if (!c.birth) c.warns.push('生年月日なし');
+    if (!c.kana) c.warns.push('ふりがななし');
+    if (!c.hospital) c.warns.push('医療機関なし');
+  }
+  for (const w of (c.imp && c.imp.warns) || []) c.warns.push(w);
+  c.dup = 0;
+  return c;
+}
+// 同じ患者さん（氏名＋生年月日＋医療機関）のカードが2枚以上あるか
+function computeDup(cards) {
+  const groups = new Map();
+  for (const c of cards) {
+    c.dup = 0;
+    if (!c.nameKey) continue;
+    const k = c.nameKey + '|' + c.birthDigits + '|' + c.hospKey;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  }
+  for (const g of groups.values()) if (g.length > 1) for (const c of g) c.dup = g.length;
+}
+const cardHasIssue = c => c.issues.length > 0 || c.dup > 1;
+// 来局予想日（年つき）と、今日から何日後か
+function visitInfo(c, today) {
+  const d = parseISODate(c.visit);
+  return d ? { date: d, diff: Math.round((d - today) / 86400000) } : null;
+}
+// 記憶する時刻は秒までにそろえる（書き出したファイルに入れる時刻が秒までのため。戻したときに同じ値になる）
+const nowSec = () => Math.floor(Date.now() / 1000) * 1000;
+const newGen = () => 'g' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+
+/* =========================================================
+   7. この端末に記憶する（IndexedDB＝ブラウザの中にある保存場所。端末の外には出ません）
+      meta … 今のデータの説明／cards … カード（1枚ずつ）／photos … 写真（「世代:カードの番号」で1枚ずつ）
+   ========================================================= */
+const DB_NAME = 'yosei-card-update', SCHEMA = 1;
+let dbPromise = null;
+function idb() {
+  if (!dbPromise) {
+    dbPromise = new Promise((res, rej) => {
+      let r;
+      try { r = indexedDB.open(DB_NAME, 1); } catch (e) { rej(e); return; }
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
+        if (!db.objectStoreNames.contains('cards')) db.createObjectStore('cards', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('blocked'));
+    });
+    dbPromise.catch(() => { dbPromise = null; });
+  }
+  return dbPromise;
+}
+const txDone = tx => new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('abort')); });
+const reqDone = rq => new Promise((res, rej) => { rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+const photoKey = (gen, id) => gen + ':' + id;
+
+async function savePhotos(list) {
+  if (!list.length) return;
+  const db = await idb();
+  const tx = db.transaction('photos', 'readwrite');
+  const st = tx.objectStore('photos');
+  for (const [k, b] of list) st.put(b, k);
+  await txDone(tx);
+}
+// 新しい内容にまるごと切り替える。カード・説明・古い写真の片づけを1回の処理で行うので、途中で止まっても前の内容が残る
+async function commitAll(info, cards) {
+  const db = await idb();
+  const tx = db.transaction(['meta', 'cards', 'photos'], 'readwrite');
+  const cs = tx.objectStore('cards');
+  cs.clear();
+  for (const c of cards) cs.put(toRecord(c));
+  tx.objectStore('meta').put(info, 'info');
+  const rq = tx.objectStore('photos').openCursor();
+  rq.onsuccess = () => {
+    const cur = rq.result;
+    if (!cur) return;
+    if (!String(cur.key).startsWith(info.gen + ':')) cur.delete();
+    cur.continue();
+  };
+  await txDone(tx);
+}
+// 途中でやめた取り込みの写真を片づける
+async function dropPhotosOf(gen) {
+  try {
+    const db = await idb();
+    const tx = db.transaction('photos', 'readwrite');
+    const rq = tx.objectStore('photos').openCursor();
+    rq.onsuccess = () => { const cur = rq.result; if (!cur) return; if (String(cur.key).startsWith(gen + ':')) cur.delete(); cur.continue(); };
+    await txDone(tx);
+  } catch (e) { /* 片づけられなくても、次の取り込みのときに消える */ }
+}
+async function saveInfo() {
+  const db = await idb();
+  const tx = db.transaction('meta', 'readwrite');
+  tx.objectStore('meta').put(state.info, 'info');
+  await txDone(tx);
+}
+async function clearSaved() {
+  const db = await idb();
+  const tx = db.transaction(['meta', 'cards', 'photos'], 'readwrite');
+  tx.objectStore('meta').delete('info');
+  tx.objectStore('cards').clear();
+  tx.objectStore('photos').clear();
+  await txDone(tx);
+}
+async function savedPhoto(c) {
+  const db = await idb();
+  return reqDone(db.transaction('photos', 'readonly').objectStore('photos').get(photoKey(state.info.gen, c.id)));
+}
+async function restoreSaved() {
+  try {
+    const db = await idb();
+    const tx = db.transaction(['meta', 'cards'], 'readonly');
+    const [info, recs] = await Promise.all([reqDone(tx.objectStore('meta').get('info')), reqDone(tx.objectStore('cards').getAll())]);
+    if (!info || info.schema !== SCHEMA || !Array.isArray(recs)) return false;
+    if (state.loading || state.info) return false;   // すでに新しく取り込み始めている
+    state.cards = recs.map(derive);
+    computeDup(state.cards);
+    state.info = info;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* =========================================================
+   8. 写真の向きをそろえる（PDFの中で回して置いてある写真は、正しい向きのJPEGに作り直す）
+   ========================================================= */
+function orient(m) {
+  const ang = Math.atan2(m[1], m[0]) * 180 / Math.PI;
+  return { rot: ((Math.round(ang / 90) * 90) % 360 + 360) % 360, mirror: (m[0] * m[3] - m[1] * m[2]) < 0 };
+}
+function loadImage(blob) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); };
+    img.src = url;
+  });
+}
+async function uprightJpeg(blob, o) {
+  const img = await loadImage(blob);
+  const W = img.naturalWidth, H = img.naturalHeight, cv = document.createElement('canvas');
+  cv.width = o.rot % 180 ? H : W; cv.height = o.rot % 180 ? W : H;
+  const g = cv.getContext('2d');
+  g.translate(cv.width / 2, cv.height / 2); g.rotate(-o.rot * Math.PI / 180); if (o.mirror) g.scale(1, -1);
+  g.drawImage(img, -W / 2, -H / 2);
+  const out = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.88));
+  if (!out) throw new Error('canvas');
+  return out;
+}
+
+/* =========================================================
+   9. 取り込み（GoodNotesのPDF）
+   ========================================================= */
+function setProgress(text, frac) {
+  $('#pText').textContent = text;
+  $('#pFill').style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+}
+const pause = () => new Promise(r => setTimeout(r, 0));
+const baseName = n => String(n).split('/').pop();
+const DATA_JSON = 'yosei-data.json';
+
+async function importPdfs(fileList) {
+  const pdfIn = [], zipIn = [];
+  for (const f of fileList) {
+    const n = f.name.toLowerCase();
+    if (n.endsWith('.pdf') || f.type === 'application/pdf') pdfIn.push(f);
+    else if (n.endsWith('.zip') || /zip/.test(f.type)) zipIn.push(f);
+  }
+  if (!pdfIn.length && !zipIn.length) { showNotice('PDF（またはPDFをまとめたZIP）が見つかりませんでした。', 'warn'); return; }
+  if (typeof DecompressionStream === 'undefined') {
+    showNotice('この端末のブラウザでは読み込めません。iPadはiPadOS 16.4以降のSafari、パソコンはChromeの最新版で開いてください。', 'bad');
+    return;
+  }
+  closeDlg();
+  state.loading = true;
+  $('#progress').hidden = false;
+  setProgress('ファイルを確認中…', 0);
+  const gen = newGen(), files = [], cards = [], now = nowSec();
+  let nextId = state.info ? state.info.nextId : 1;   // 番号は、取り込み直しても前の続きから付ける（同じ番号を別の人に使わない）
+  let pending = [];
+  const flush = async () => { const list = pending; pending = []; await savePhotos(list); };
+  try {
+    const jobs = [];
+    for (const f of pdfIn) jobs.push({ key: f.name, zip: '', file: f, ent: null });
+    for (const z of zipIn) {
+      let ents = null;
+      try { ents = await listZip(z); } catch (err) { files.push({ key: z.name, zip: '', pages: 0, error: 'ZIPファイルとして読み取れませんでした', created: null }); continue; }
+      if (ents.some(e => baseName(e.name) === DATA_JSON)) {
+        // このアプリで書き出したファイルを選んだとき
+        state.loading = false; $('#progress').hidden = true;
+        showNotice('「' + z.name + '」は、このアプリで書き出したファイルです。設定の「書き出したファイルを読み込む」から読み込んでください。', 'warn', '設定を開く', () => openSettings('data'));
+        return;
+      }
+      for (const ent of ents) {
+        const base = baseName(ent.name);
+        if (!/\.pdf$/i.test(base) || base.startsWith('._') || /(^|\/)__MACOSX\//.test(ent.name)) continue;
+        jobs.push({ key: ent.name, zip: z.name, file: z, ent });
+      }
+    }
+    jobs.sort((a, b) => a.key.localeCompare(b.key, 'ja', { numeric: true }));
+    let lastPause = performance.now();
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      const rec = { key: job.key, zip: job.zip, pages: 0, error: '', created: null, blank: 0, skipped: 0 };
+      files.push(rec);
+      let pdf = null;
+      try {
+        pdf = await openPdf(job.ent ? await zipEntryBytes(job.file, job.ent) : new Uint8Array(await job.file.arrayBuffer()));
+      } catch (e) {
+        const msg = e && e.message;
+        rec.error = msg === 'encrypted' ? 'パスワード付き（暗号化）のため読めません' : msg === 'notpdf' ? 'PDFファイルではないようです' : 'PDFとして読み取れませんでした';
+      }
+      if (pdf) {
+        const created = pdf.created || (job.ent ? null : new Date(job.file.lastModified));
+        rec.created = created ? created.getTime() : null;
+        // 年が書かれていない日付は、PDFを書き出した日にいちばん近い日付として年を付ける
+        const ref = created ? new Date(created.getFullYear(), created.getMonth(), created.getDate()) : todayMidnight();
+        const pages = pdf.pages();
+        rec.pages = pages.length;
+        if (!pages.length) rec.error = 'ページが見つかりませんでした';
+        const fontCache = new Map();
+        for (let p = 0; p < pages.length; p++) {
+          let ex;
+          try { ex = await extractPage(pdf, pages[p], fontCache); }
+          catch (e) { rec.error = (p + 1) + 'ページ目が読み取れませんでした'; continue; }
+          const texts = ex.lines.map(l => l.text);
+          // 文字も写真もない白紙のページはカードとして数えない
+          if (!ex.images.length && !texts.some(t => /[\p{L}\p{N}]/u.test(t))) { rec.blank++; continue; }
+          const r = parseCardText(texts);
+          // ノートをまるごと書き出したPDF（3ページ以上）の最初と最後のページは、カードの形でなければ数えない（表紙・ブックマーク用のページ）
+          if (pages.length >= 3 && (p === 0 || p === pages.length - 1) && r.month == null) { rec.skipped++; continue; }
+          const v = r.month ? inferVisit(r, ref) : null;
+          let photo = null;
+          for (const im of ex.images) if (im.dct && im.ss >= 0 && (!photo || im.w * im.h > photo.w * photo.h)) photo = im;
+          const c = {
+            id: nextId++, name: r.name, kana: r.kana, birth: r.birth, hospital: r.hospital,
+            visit: v ? isoOf(v.date) : null, drugs: r.drugs.slice(), hasPhoto: false, updatedAt: now, paused: false,
+            imp: { file: (job.zip ? job.zip + '：' : '') + job.key, page: p + 1, raw: texts, warns: r.warns.filter(w => /合っていません/.test(w)), photoNote: '' },
+          };
+          if (photo) {
+            let blob = new Blob([pdf.u8.slice(photo.ss, photo.se)], { type: 'image/jpeg' });
+            const o = orient(photo.m);
+            if (o.rot || o.mirror) { try { blob = await uprightJpeg(blob, o); } catch (e) { c.imp.photoNote = '写真の向きを直せませんでした'; } }
+            pending.push([photoKey(gen, c.id), blob]);
+            c.hasPhoto = true;
+            if (pending.length >= 25) await flush();
+          } else if (ex.images.length) c.imp.photoNote = 'このページの写真は取り込めない形式です';
+          cards.push(derive(c));
+          if (pages.length > 1 && performance.now() - lastPause > 60) {
+            setProgress('取り込み中… ' + (i + 1) + ' / ' + jobs.length + ' 件（' + (p + 1) + ' / ' + pages.length + ' ページ）', (i + (p + 1) / pages.length) / jobs.length);
+            await pause(); lastPause = performance.now();
+          }
+        }
+      }
+      setProgress('取り込み中… ' + (i + 1) + ' / ' + jobs.length + ' 件', (i + 1) / jobs.length);
+      if (performance.now() - lastPause > 60) { await pause(); lastPause = performance.now(); }
+    }
+    if (!cards.length) {
+      await dropPhotosOf(gen);
+      state.loading = false; $('#progress').hidden = true;
+      const why = files.filter(f => f.error).map(f => f.key + '：' + f.error).slice(0, 3).join('／');
+      showNotice('カードが1枚も見つからなかったので、取り込みませんでした' + (why ? '（' + why + '）' : '') + '。前の内容はそのままです。', 'bad');
+      return;
+    }
+    computeDup(cards);
+    setProgress('このiPadに記憶しています…', 1);
+    await flush();
+    // ファイル名の日付＝その日に来局した患者さんまでカードを更新してある、という意味（複数あるときは古いほう）
+    const fdates = files.filter(f => !f.error).map(f => fileDate({ key: f.key, zip: f.zip, created: f.created ? new Date(f.created) : null })).filter(Boolean);
+    const info = {
+      schema: SCHEMA, gen, nextId, importedAt: now, changedAt: now,
+      source: { kind: 'pdf', names: files.map(f => (f.zip ? f.zip + '：' : '') + f.key).slice(0, 20), count: files.length },
+      updatedThrough: fdates.length ? isoOf(fdates.reduce((a, b) => (a < b ? a : b))) : null,
+      lastExportAt: null, files,
+    };
+    await commitAll(info, cards);
+    state.cards = cards; state.info = info;
+  } catch (e) {
+    await dropPhotosOf(gen);
+    state.loading = false; $('#progress').hidden = true;
+    showNotice('このiPadに記憶できなかったため、取り込みを中止しました。前の内容はそのままです。iPadの空き容量を確かめてください。', 'bad');
+    return;
+  }
+  state.loading = false;
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  $('#progress').hidden = true;
+  state.limit = 100;
+  renderAll();
+  const nIssue = state.cards.filter(cardHasIssue).length, nErr = state.info.files.filter(f => f.error).length;
+  const done = '取り込みが終わりました（カード ' + state.cards.length + ' 枚）。';
+  if (nIssue || nErr) {
+    showNotice(done + (nIssue ? '確認が必要なカードが ' + nIssue + ' 枚' : '') + (nIssue && nErr ? '、' : '') + (nErr ? '読めなかったPDFが ' + nErr + ' 件' : '') + 'あります。', 'warn', '設定で確認する', () => openSettings('check'));
+  } else showNotice(done + 'このiPadに記憶しました。', 'ok');
+}
+
+/* =========================================================
+   10. 「全部入りのファイル」の書き出し（ZIP・圧縮なし）
+       中身：yosei-data.json（カードの内容）と photos/<カードの番号>.jpg（写真）
+   ========================================================= */
+let crcTable = null;
+// CRC32：ZIPが、中身が壊れていないかを確かめるために使う数
+function crc32(u8) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; crcTable[n] = c >>> 0; }
+  }
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+// entries: [{ name, data（Blob または Uint8Array）, size, crc }] を、圧縮なしのZIPにまとめる。写真はBlobのままつなぐ（メモリーに全部は載せない）
+function zipStore(entries, when) {
+  if (entries.length > 65000) throw new Error('toomany');
+  const enc = new TextEncoder();
+  const dosTime = (when.getHours() << 11) | (when.getMinutes() << 5) | (when.getSeconds() >> 1);
+  const dosDate = ((Math.max(1980, when.getFullYear()) - 1980) << 9) | ((when.getMonth() + 1) << 5) | when.getDate();
+  const parts = [], central = [];
+  let offset = 0;
+  for (const e of entries) {
+    const name = enc.encode(e.name);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034B50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, e.crc, true);
+    lh.setUint32(18, e.size, true); lh.setUint32(22, e.size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(lh.buffer, name, e.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014B50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, e.crc, true);
+    ch.setUint32(20, e.size, true); ch.setUint32(24, e.size, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    central.push(ch.buffer, name);
+    offset += 30 + name.length + e.size;
+    if (offset > 0xFFFFFFF0) throw new Error('toobig');
+  }
+  let cdSize = 0;
+  for (const p of central) cdSize += p.byteLength;
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054B50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return [...parts, ...central, end.buffer];
+}
+// 日時を「2026-11-12T18:30:05+09:00」の形にする
+function isoLocal(d) {
+  const off = -d.getTimezoneOffset(), a = Math.abs(off);
+  return isoOf(d) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()) + (off >= 0 ? '+' : '-') + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60);
+}
+const fmtMB = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+
+async function buildExport() {
+  const when = new Date(nowSec());
+  const cards = state.cards.slice().sort((a, b) => a.id - b.id);
+  const photoEntries = [], photoOf = new Map();
+  let missing = 0, lastPause = performance.now();
+  for (let i = 0; i < cards.length; i++) {
+    const c = cards[i];
+    if (c.hasPhoto) {
+      let blob = null;
+      try { blob = await savedPhoto(c); } catch (e) { /* 下で「写真なし」として数える */ }
+      if (blob && blob.size) {
+        const u8 = new Uint8Array(await blob.arrayBuffer());
+        const name = 'photos/' + c.id + '.jpg';
+        photoEntries.push({ name, data: blob, size: u8.length, crc: crc32(u8) });
+        photoOf.set(c.id, name);
+      } else missing++;
+    }
+    if (performance.now() - lastPause > 60) { setProgress('書き出しの準備中… ' + (i + 1) + ' / ' + cards.length + ' 枚', (i + 1) / cards.length); await pause(); lastPause = performance.now(); }
+  }
+  const data = {
+    format: 'yosei-data', version: 1, app: APP_VERSION,
+    exportedAt: isoLocal(when),
+    updatedThrough: state.info.updatedThrough || null,
+    nextId: state.info.nextId,
+    source: { kind: state.info.source.kind, importedAt: isoLocal(new Date(state.info.importedAt)) },
+    cards: cards.map(c => ({
+      id: c.id, name: c.name, kana: c.kana, birth: c.birth || null, hospital: c.hospital, visit: c.visit || null,
+      drugs: c.drugs.map(t => ({ text: t })),
+      photo: photoOf.get(c.id) || null,
+      updatedAt: isoLocal(new Date(c.updatedAt)), paused: !!c.paused,
+      import: c.imp ? { file: c.imp.file, page: c.imp.page, raw: c.imp.raw, warns: c.imp.warns, photoNote: c.imp.photoNote || '' } : null,
+    })),
+  };
+  const json = new TextEncoder().encode(JSON.stringify(data));
+  const parts = zipStore([{ name: DATA_JSON, data: json, size: json.length, crc: crc32(json) }, ...photoEntries], when);
+  const name = 'yosei-data-' + when.getFullYear() + pad2(when.getMonth() + 1) + pad2(when.getDate()) + '-' + pad2(when.getHours()) + pad2(when.getMinutes()) + '.zip';
+  const file = new File(parts, name, { type: 'application/zip', lastModified: when.getTime() });
+  return { file, name, size: file.size, cards: cards.length, photos: photoEntries.length, missing, at: when.getTime() };
+}
+
+function canShareFile(file) {
+  try { return !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+}
+function closeExport() {
+  const d = $('#expDlg');
+  if (d.open) d.close();
+}
+async function startExport() {
+  if (!state.info || state.loading) return;
+  hideNotice();
+  state.loading = true;
+  $('#progress').hidden = false;
+  setProgress('書き出しの準備中…', 0);
+  let exp = null;
+  try { exp = await buildExport(); }
+  catch (e) {
+    state.loading = false; $('#progress').hidden = true;
+    showNotice(e && e.message === 'toobig' ? 'ファイルが大きすぎて、書き出せませんでした（4GBをこえています）。' : '書き出しの準備ができませんでした。もう一度試してください。', 'bad');
+    return;
+  }
+  state.loading = false; $('#progress').hidden = true;
+  state.exp = exp;
+  if (state.expUrl) { URL.revokeObjectURL(state.expUrl); state.expUrl = null; }
+  $('#expFacts').innerHTML = 'カード <b>' + exp.cards + '</b> 枚・写真 <b>' + exp.photos + '</b> 枚／大きさ <b>' + esc(fmtMB(exp.size)) + '</b><div class="exp-name">' + esc(exp.name) + '</div>';
+  const share = canShareFile(exp.file);
+  $('#expShare').hidden = !share;
+  $('#expDown').classList.toggle('primary', !share);
+  $('#expNote').textContent = (exp.missing ? '写真を取り出せなかったカードが ' + exp.missing + ' 枚ありました（文字の内容は入っています）。\n' : '') +
+    (share ? '「共有する」を押すと、iPadの共有の画面が開きます。AirDropで送るときは送り先のiPadを、保管するときは「"ファイル"に保存」を選んでください。' : '「ダウンロードする」を押すと、ダウンロードの場所に保存されます。');
+  $('#expDlg').showModal();
+}
+// 書き出した日時を控える（最後の書き出しからの日数を知らせるため）
+function markExported() {
+  if (!state.exp || !state.info) return;
+  state.info.lastExportAt = state.exp.at;
+  saveInfo().catch(() => {});
+  renderStatus();
+}
+
+/* =========================================================
+   11. 書き出したファイルから元に戻す
+   ========================================================= */
+const str = (v, max) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, max || 400);
+const int = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
+function cleanBirth(b) {
+  if (!b || typeof b !== 'object') return null;
+  const yy = int(b.yy, 0, 200), mm = int(b.mm, 1, 12), dd = int(b.dd, 1, 31);
+  if (yy == null || mm == null || dd == null) return null;
+  const era = ['M', 'T', 'S', 'H', 'R'].includes(b.era) ? b.era : '';
+  return { era, yy, mm, dd, y: int(b.y, 1850, 2200), src: ['w', 'j', 'wj'].includes(b.src) ? b.src : 'j' };
+}
+// 「2026-11-12」の形で、実際にある日付だけを通す（13月や45日は通さない）
+const isoDay = v => { const t = str(v, 10), d = parseISODate(t); return d && isoOf(d) === t ? t : null; };
+const timeOf = (s, fallback) => { const t = Date.parse(s); return Number.isFinite(t) ? t : fallback; };
+
+async function restoreFromFile(file) {
+  if (typeof DecompressionStream === 'undefined') {
+    showNotice('この端末のブラウザでは読み込めません。iPadはiPadOS 16.4以降のSafari、パソコンはChromeの最新版で開いてください。', 'bad');
+    return;
+  }
+  closeDlg();
+  state.loading = true;
+  $('#progress').hidden = false;
+  setProgress('ファイルを確認中…', 0);
+  const fail = (text) => { state.loading = false; $('#progress').hidden = true; showNotice(text + '前の内容はそのままです。', 'bad'); };
+  let ents, jent, data;
+  try { ents = await listZip(file); } catch (e) { fail('ZIPファイルとして読み取れませんでした。'); return; }
+  jent = ents.filter(e => baseName(e.name) === DATA_JSON).sort((a, b) => a.name.length - b.name.length)[0];
+  if (!jent) { fail('このアプリで書き出したファイルではないようです（yosei-data.json が入っていません）。'); return; }
+  try { data = JSON.parse(new TextDecoder('utf-8').decode(await zipEntryBytes(file, jent))); } catch (e) { fail('ファイルの中身が読み取れませんでした（壊れている可能性があります）。'); return; }
+  if (!data || data.format !== 'yosei-data' || !Array.isArray(data.cards)) { fail('このアプリで書き出したファイルではないようです。'); return; }
+  if (!(data.version >= 1) || data.version > 1) { fail('新しい版のアプリで書き出されたファイルです。設定の「最新の版に更新する」でアプリを新しくしてから、もう一度読み込んでください。'); return; }
+  const prefix = jent.name.slice(0, jent.name.length - DATA_JSON.length);   // フォルダーに入れてからZIPにし直した場合
+  const byName = new Map(ents.map(e => [e.name, e]));
+  const gen = newGen(), now = nowSec(), cards = [], seen = new Set();
+  let pending = [], maxId = 0, lostPhoto = 0, skipped = 0;
+  const flush = async () => { const list = pending; pending = []; await savePhotos(list); };
+  try {
+    let lastPause = performance.now();
+    for (let i = 0; i < data.cards.length; i++) {
+      const s = data.cards[i];
+      const id = s && int(s.id, 1, 2147483647);
+      if (id == null || seen.has(id)) { skipped++; continue; }
+      seen.add(id); maxId = Math.max(maxId, id);
+      const im = s.import && typeof s.import === 'object' ? s.import : null;
+      const c = {
+        id, name: str(s.name).trim(), kana: str(s.kana).trim(), birth: cleanBirth(s.birth), hospital: str(s.hospital).trim(),
+        visit: isoDay(s.visit),
+        drugs: (Array.isArray(s.drugs) ? s.drugs : []).map(d => str(d && typeof d === 'object' ? d.text : d).trim()).filter(Boolean),
+        hasPhoto: false, updatedAt: timeOf(s.updatedAt, now), paused: !!s.paused,
+        imp: im ? { file: str(im.file), page: int(im.page, 1, 100000) || 0, raw: (Array.isArray(im.raw) ? im.raw : []).map(x => str(x, 2000)), warns: (Array.isArray(im.warns) ? im.warns : []).map(x => str(x)), photoNote: str(im.photoNote) } : null,
+      };
+      if (typeof s.photo === 'string' && s.photo) {
+        const ent = byName.get(prefix + s.photo);
+        let bytes = null;
+        if (ent) { try { bytes = await zipEntryBytes(file, ent); } catch (e) { /* 下で数える */ } }
+        if (bytes && bytes.length) {
+          pending.push([photoKey(gen, id), new Blob([bytes], { type: 'image/jpeg' })]);
+          c.hasPhoto = true;
+          if (pending.length >= 25) await flush();
+        } else lostPhoto++;
+      }
+      cards.push(derive(c));
+      if (performance.now() - lastPause > 60) { setProgress('読み込み中… ' + (i + 1) + ' / ' + data.cards.length + ' 枚', (i + 1) / data.cards.length); await pause(); lastPause = performance.now(); }
+    }
+    if (!cards.length) { await dropPhotosOf(gen); fail('ファイルの中にカードが1枚もありませんでした。'); return; }
+    computeDup(cards);
+    setProgress('このiPadに記憶しています…', 1);
+    await flush();
+    const exportedAt = timeOf(data.exportedAt, null);
+    const info = {
+      schema: SCHEMA, gen, nextId: Math.max(int(data.nextId, 1, 2147483647) || 1, maxId + 1), importedAt: now, changedAt: exportedAt || now,
+      source: { kind: 'file', names: [file.name], count: 1, exportedAt },
+      updatedThrough: isoDay(data.updatedThrough),
+      lastExportAt: exportedAt, files: [],
+    };
+    await commitAll(info, cards);
+    state.cards = cards; state.info = info;
+  } catch (e) {
+    await dropPhotosOf(gen);
+    fail('このiPadに記憶できなかったため、読み込みを中止しました。iPadの空き容量を確かめてください。');
+    return;
+  }
+  state.loading = false;
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  $('#progress').hidden = true;
+  state.limit = 100;
+  renderAll();
+  const extra = (lostPhoto ? '写真を取り出せなかったカードが ' + lostPhoto + ' 枚' : '') + (lostPhoto && skipped ? '、' : '') + (skipped ? '読めなかったカードが ' + skipped + ' 枚' : '');
+  showNotice('ファイルの内容に戻しました（カード ' + cards.length + ' 枚）。' + (extra ? extra + 'あります。' : ''), extra ? 'warn' : 'ok');
+}
+
+/* =========================================================
+   12. 画面
+   ========================================================= */
+// お知らせは数秒で自動的に消す（いつまでも残らないように）。「×」や検索の入力でもすぐ消える
+const NOTICE_MS = { ok: 3000, warn: 6000, bad: 10000 };
+let noticeTimer = null;
+function hideNotice() {
+  clearTimeout(noticeTimer); noticeTimer = null;
+  const div = $('#notice').firstElementChild;
+  if (!div) return;
+  div.classList.add('fade');
+  setTimeout(() => { if (div.parentNode) div.remove(); }, 350);
+}
+function showNotice(text, kind, btnLabel, onClick) {
+  const box = $('#notice');
+  clearTimeout(noticeTimer); noticeTimer = null;
+  box.innerHTML = '';
+  if (!text) return;
+  kind = kind || 'ok';
+  const div = document.createElement('div');
+  div.className = 'notice ' + kind;
+  div.setAttribute('role', 'status');
+  const sp = document.createElement('span'); sp.textContent = text; div.appendChild(sp);
+  if (btnLabel) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = btnLabel;
+    b.addEventListener('click', () => { hideNotice(); onClick(); });
+    div.appendChild(b);
+  }
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'notice-x'; x.textContent = '×'; x.setAttribute('aria-label', 'お知らせを閉じる');
+  x.addEventListener('click', hideNotice);
+  div.appendChild(x);
+  box.appendChild(div);
+  noticeTimer = setTimeout(hideNotice, NOTICE_MS[kind] || 5000);
+}
+
+// 入れ替え・消去の前の確認。「はい」なら true
+let askResolve = null;
+function ask(title, text, yesLabel, danger) {
+  $('#askTitle').textContent = title;
+  $('#askText').textContent = text;
+  const y = $('#askYes');
+  y.textContent = yesLabel;
+  y.className = danger ? 'btn danger' : 'btn primary';
+  return new Promise(res => { askResolve = res; $('#askDlg').showModal(); });
+}
+function answer(v) {
+  const d = $('#askDlg');
+  if (d.open) d.close();
+  const r = askResolve; askResolve = null;
+  if (r) r(v);
+}
+
+function openSettings(sec) {
+  closeDlg();
+  const d = $('#setDlg');
+  if (!d.open) d.showModal();
+  const body = d.querySelector('.set-body');
+  const target = sec ? $('#' + sec + 'Sec') : null;
+  if (target && !target.hidden) body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top;
+  else body.scrollTop = 0;
+}
+function closeSettings() {
+  const d = $('#setDlg');
+  if (d.open) d.close();
+}
+
+function renderStatus() {
+  const info = state.info;
+  if (!info) {
+    $('#status').textContent = 'まだカードを取り込んでいません';
+    $('#setStatus').textContent = 'まだ取り込んでいません。';
+    return;
+  }
+  const ut = parseISODate(info.updatedThrough);
+  const upd = ut ? '<b class="upd">' + fmtMD(ut) + '（' + WD[ut.getDay()] + '）来局分まで更新済み</b>' : '';
+  const from = info.source.kind === 'file' ? '書き出したファイルから' : 'GoodNotesのPDFから';
+  const when = fmtDT(new Date(info.importedAt));
+  $('#status').innerHTML = (upd ? upd + '／' : '') + esc('カード ' + state.cards.length + ' 枚／' + when + ' に' + from + '取り込み');
+  const names = (info.source.names || []).slice(0, 5);
+  $('#setStatus').innerHTML = (upd ? upd + '<br>' : '') + esc('カード ' + state.cards.length + ' 枚（写真あり ' + state.cards.filter(c => c.hasPhoto).length + ' 枚）。' + when + ' に、' + from + '取り込みました。このiPadに記憶しています。') +
+    (names.length ? '<br>' + esc('ファイル名：' + names.join('、') + (info.source.count > names.length ? ' ほか' : '')) : '');
+  const last = info.lastExportAt ? new Date(info.lastExportAt) : null;
+  $('#expLast').innerHTML = last ? '最後の書き出し：<b>' + esc(fmtYMD(last) + ' ' + pad2(last.getHours()) + ':' + pad2(last.getMinutes())) + '</b>' : '最後の書き出し：<b>まだ書き出していません</b>';
+}
+
+function renderAll() {
+  const has = !!state.info;
+  $('#empty').hidden = has;
+  $('#main').hidden = !has;
+  $('#clearSec').hidden = !has;
+  $('#checkSec').hidden = !has;
+  renderStatus();
+  if (!has) {
+    $('#checkSummary').innerHTML = $('#checkList').innerHTML = $('#fileErrors').innerHTML = '';
+    $('#patientSummary').innerHTML = $('#patientResults').innerHTML = '';
+    return;
+  }
+  renderCheck();
+  renderPatient();
+}
+
+function sortRows(rows) {
+  rows.sort((a, b) => {
+    const x = a.v ? a.v.diff : null, y = b.v ? b.v.diff : null;
+    if (x !== y) {
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return x - y;
+    }
+    return (a.c.kanaKey || a.c.nameKey).localeCompare(b.c.kanaKey || b.c.nameKey, 'ja') || a.c.id - b.c.id;
+  });
+  return rows;
+}
+function resultRow(r) {
+  const c = r.c, v = r.v;
+  const cls = !v ? '' : v.diff < 0 ? 'past' : v.diff <= 2 ? 'soon' : '';
+  const date = v
+    ? '<div class="d">' + fmtMD(v.date) + '<span class="wd">（' + WD[v.date.getDay()] + '）</span></div><div class="rel">' + esc(relLabel(v.diff)) + '</div>'
+    : '<div class="d">—</div><div class="rel">日付なし</div>';
+  const sub = [c.hospital || '医療機関の記載なし'];
+  if (c.birth) sub.push('生年月日 ' + fmtBirth(c.birth));
+  return '<article class="res" data-card="' + c.id + '">' +
+    '<div class="res-date ' + cls + '">' + date + '</div>' +
+    '<div class="res-main"><div class="res-name">' + esc(c.name || '（氏名なし）') + (c.kana ? '<span class="kana">' + esc(c.kana) + '</span>' : '') + '</div>' +
+    '<div class="res-sub">' + esc(sub.join('　')) + '</div>' +
+    (c.drugs.length ? '<ul class="res-drugs">' + c.drugs.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '') + '</div>' +
+    '<div class="res-act"><button type="button" class="btn small" data-open="' + c.id + '">カードを見る</button></div></article>';
+}
+function renderPatient() {
+  const terms = parsePatientQuery($('#qPatient').value.trim());
+  const sumEl = $('#patientSummary'), listEl = $('#patientResults');
+  if (!terms.length) {
+    sumEl.innerHTML = '<p class="hint">氏名・ふりがな・生年月日などを入れると、取り込んだカードを確かめられます（例：ふるかわ、550327、55.3.27）。</p>';
+    listEl.innerHTML = '';
+    return;
+  }
+  const today = todayMidnight();
+  const rows = sortRows(state.cards.filter(c => matchPatient(c, terms)).map(c => ({ c, v: visitInfo(c, today) })));
+  sumEl.innerHTML = rows.length ? '<p><b>' + rows.length + ' 件</b>見つかりました</p>' : '<p class="hint">見つかりませんでした。名字だけ、ふりがなの一部だけなど、短くすると見つかることがあります。</p>';
+  let html = rows.slice(0, state.limit).map(resultRow).join('');
+  if (rows.length > state.limit) html += '<button type="button" class="btn more" data-more="1">さらに表示（残り ' + (rows.length - state.limit) + ' 件）</button>';
+  listEl.innerHTML = html;
+}
+
+// カードの確認事項の印（赤：確認が必要／黄：書いていない項目）
+function cardTags(c, withWarns) {
+  return c.issues.map(t => '<span class="tag bad">' + esc(t) + '</span>').join('') +
+    (c.dup > 1 ? '<span class="tag bad">同じ患者さん・医療機関のカードが ' + c.dup + ' 枚</span>' : '') +
+    (withWarns ? c.warns.map(t => '<span class="tag warn">' + esc(t) + '</span>').join('') : '');
+}
+const whereOf = c => (c.imp && c.imp.file ? c.imp.file + (c.imp.page ? '・' + c.imp.page + 'ページ目' : '') : '');
+
+// 設定の中の「読み取り結果の確認」：確認が必要なカードだけを、取り込んだ順に並べる
+function renderCheck() {
+  const today = todayMidnight();
+  const bad = state.cards.filter(cardHasIssue).sort((a, b) => a.id - b.id);
+  const files = state.info.files || [];
+  const errs = files.filter(f => f.error);
+  const blank = files.reduce((n, f) => n + (f.blank || 0), 0), skipped = files.reduce((n, f) => n + (f.skipped || 0), 0);
+  let head;
+  if (bad.length || errs.length) {
+    head = '<p class="ck-count bad">' + (bad.length ? '確認が必要なカード：' + bad.length + ' 枚' : '') + (bad.length && errs.length ? '／' : '') + (errs.length ? '読めなかったPDF：' + errs.length + ' 件' : '') + '</p>' +
+      '<p class="note">「見る」で、カードの写真と読み取った文字を確かめられます。</p>';
+  } else head = '<p class="ck-count ok">確認が必要なカードはありません。</p>';
+  const notes = (skipped ? 'ノートの最初と最後にある、カードではないページ（表紙・ブックマーク用のページ：' + skipped + ' ページ）は数えていません。' : '') +
+    (blank ? '文字も写真もない白紙のページ（' + blank + ' ページ）は数えていません。' : '');
+  $('#checkSummary').innerHTML = head + (notes ? '<p class="note">' + notes + '</p>' : '');
+  $('#checkList').innerHTML = bad.map(c => {
+    const v = visitInfo(c, today), w = whereOf(c);
+    return '<div class="ck-item" data-card="' + c.id + '"><div class="ck-main">' +
+      '<div class="ck-name">' + esc(c.name || '（氏名なし）') + (c.kana ? '<span class="kana">' + esc(c.kana) + '</span>' : '') + '</div>' +
+      '<div class="ck-sub">' + esc(w) + (v ? (w ? '／' : '') + '来局予想日 ' + esc(fmtYMD(v.date)) : '') + '</div>' +
+      '<div>' + cardTags(c, false) + '</div></div>' +
+      '<button type="button" class="btn small" data-open="' + c.id + '">見る</button></div>';
+  }).join('');
+  $('#fileErrors').innerHTML = errs.length ? '<div class="ferr"><b>読めなかったPDF</b><ul>' + errs.map(f => '<li>' + esc(f.key) + '：' + esc(f.error) + '</li>').join('') + '</ul></div>' : '';
+}
+
+/* ---------- カードの詳細（写真つき） ---------- */
+function closeDlg() {
+  const dlg = $('#dlg');
+  if (dlg.open) dlg.close();
+}
+function openCard(id) {
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  const v = visitInfo(c, todayMidnight());
+  $('#dlgTitle').textContent = c.name || '（氏名なし）';
+  const tags = cardTags(c, true), raw = (c.imp && c.imp.raw) || [];
+  $('#dlgInfo').innerHTML =
+    '<dl class="kv">' +
+    '<dt>来局予想日</dt><dd>' + (v ? esc(fmtYMD(v.date)) + '　' + esc(relLabel(v.diff)) : 'ありません') + '</dd>' +
+    '<dt>ふりがな</dt><dd>' + esc(c.kana || '—') + '</dd>' +
+    '<dt>生年月日</dt><dd>' + (c.birth ? esc(fmtBirth(c.birth)) : '—') + '</dd>' +
+    '<dt>医療機関</dt><dd>' + esc(c.hospital || '—') + '</dd>' +
+    '<dt>カードの番号</dt><dd>' + c.id + '</dd>' +
+    '<dt>取り込み元</dt><dd>' + esc(whereOf(c) || '—') + '</dd></dl>' +
+    (tags ? '<div>' + tags + '</div>' : '') +
+    '<h4>カードの薬（' + c.drugs.length + ' 件）</h4>' +
+    (c.drugs.length ? '<ul class="res-drugs">' + c.drugs.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '<p>—</p>') +
+    (raw.length ? '<h4>PDFから読み取った文字（取り込んだときのまま）</h4><ol class="raw">' + raw.map(l => '<li>' + esc(l).replace(/\t/g, '<span class="sep">｜</span>') + '</li>').join('') + '</ol>' : '');
+  const box = $('#dlgPhoto');
+  if (state.photoUrl) { URL.revokeObjectURL(state.photoUrl); state.photoUrl = null; }
+  const seq = ++state.dlgSeq;
+  if (!c.hasPhoto) {
+    box.innerHTML = '<div class="nophoto">' + esc((c.imp && c.imp.photoNote) || 'このカードには写真がありません') + '</div>';
+  } else {
+    box.innerHTML = '<div class="nophoto">写真を読み込み中…</div>';
+    const failed = () => { if (seq === state.dlgSeq) box.innerHTML = '<div class="nophoto">写真を表示できませんでした</div>'; };
+    savedPhoto(c).then(blob => {
+      if (seq !== state.dlgSeq) return;
+      if (!blob) { failed(); return; }
+      const url = URL.createObjectURL(blob);
+      state.photoUrl = url;
+      const img = new Image();
+      img.alt = 'カードの写真';
+      img.onload = () => { if (seq === state.dlgSeq) { box.innerHTML = ''; box.appendChild(img); } };
+      img.onerror = failed;
+      img.src = url;
+    }).catch(failed);
+  }
+  const dlg = $('#dlg');
+  if (!dlg.open) dlg.showModal();
+}
+
+/* =========================================================
+   13. 操作のつなぎこみ
+   ========================================================= */
+function debounce(fn, ms) { let t = null; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+const UPDATE_KEY = 'yosei-card-update-from';
+
+function init() {
+  $('#ver').textContent = APP_VERSION;
+  const setDlg = $('#setDlg');
+  $('#btnSettings').addEventListener('click', () => { hideNotice(); openSettings(); });
+  $('#btnOpenSettings').addEventListener('click', () => openSettings());
+  $('#setClose').addEventListener('click', closeSettings);
+  setDlg.addEventListener('click', e => { if (e.target === setDlg) closeSettings(); });
+
+  // 確認の画面
+  $('#askYes').addEventListener('click', () => answer(true));
+  $('#askNo').addEventListener('click', () => answer(false));
+  $('#askDlg').addEventListener('cancel', e => { e.preventDefault(); answer(false); });
+  $('#askDlg').addEventListener('click', e => { if (e.target === $('#askDlg')) answer(false); });
+
+  // 取り込み（すでにカードがあるときは、入れ替えてよいかを必ず確かめる）
+  $('#btnPdf').addEventListener('click', async () => {
+    if (state.loading) return;
+    if (state.info && !(await ask('今のカードを、PDFの内容に入れ替えますか？',
+      'GoodNotesのPDFを取り込むと、このアプリの中のカード ' + state.cards.length + ' 枚は、PDFの内容にまるごと入れ替わります。\nこのアプリで直した内容がある場合は、すべて消えます。\n\n入れ替える前に、「全部入りのファイル」を書き出して保管しておくと、元に戻せます。',
+      '入れ替える（PDFを選ぶ）', true))) return;
+    $('#inPdf').click();
+  });
+  $('#inPdf').addEventListener('change', e => { const fs = Array.from(e.target.files); e.target.value = ''; if (fs.length) { closeSettings(); importPdfs(fs); } });
+  $('#btnData').addEventListener('click', async () => {
+    if (state.loading) return;
+    if (state.info && !(await ask('今のカードを、ファイルの内容に入れ替えますか？',
+      '書き出したファイルを読み込むと、このアプリの中のカード ' + state.cards.length + ' 枚は、ファイルを書き出したときの内容にまるごと入れ替わります。\nファイルを書き出したあとで直した内容は、消えます。',
+      '入れ替える（ファイルを選ぶ）', true))) return;
+    $('#inData').click();
+  });
+  $('#inData').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) { closeSettings(); restoreFromFile(f); } });
+  $('#btnClear').addEventListener('click', async () => {
+    if (state.loading) return;
+    const last = state.info && state.info.lastExportAt ? new Date(state.info.lastExportAt) : null;
+    if (!(await ask('取り込んだ内容を、すべて消しますか？',
+      'このiPadに記憶しているカード ' + state.cards.length + ' 枚と写真を、すべて消します。元には戻せません。\n\n' +
+      (last ? '最後に「全部入りのファイル」を書き出したのは ' + fmtYMD(last) + ' ' + pad2(last.getHours()) + ':' + pad2(last.getMinutes()) + ' です。' : '「全部入りのファイル」を、まだ一度も書き出していません。'),
+      'すべて消す', true))) return;
+    closeDlg(); closeSettings();
+    try { await clearSaved(); } catch (e) { showNotice('消せませんでした。もう一度試してください。', 'bad'); return; }
+    state.cards = []; state.info = null; state.exp = null;
+    $('#qPatient').value = '';
+    renderAll();
+    showNotice('このiPadから消しました。', 'ok');
+  });
+
+  // 書き出し
+  $('#btnExport').addEventListener('click', startExport);
+  $('#expShare').addEventListener('click', async () => {
+    if (!state.exp) return;
+    try {
+      await navigator.share({ files: [state.exp.file] });
+      markExported();
+      closeExport();
+      showNotice('共有の画面に渡しました。送り先で受け取れたか、確かめてください。', 'ok');
+    } catch (e) {
+      // 共有の画面を閉じただけ（AbortError）なら、何も知らせない
+      if (!e || e.name !== 'AbortError') showNotice('共有できませんでした。「ダウンロードする」を試してください。', 'warn');
+    }
+  });
+  $('#expDown').addEventListener('click', () => {
+    if (!state.exp) return;
+    if (!state.expUrl) state.expUrl = URL.createObjectURL(state.exp.file);
+    const a = document.createElement('a');
+    a.href = state.expUrl; a.download = state.exp.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    markExported();
+    closeExport();
+    showNotice('ダウンロードを始めました（' + state.exp.name + '）。', 'ok');
+  });
+  $('#expClose').addEventListener('click', closeExport);
+  $('#expDlg').addEventListener('click', e => { if (e.target === $('#expDlg')) closeExport(); });
+
+  $('#qPatient').addEventListener('input', debounce(() => { state.limit = 100; renderPatient(); }, 150));
+  $('#qPatient').addEventListener('input', hideNotice);
+
+  // アプリの更新：ページを読み直して、GitHubに上げた新しいファイルに切り替える（記憶した内容は同じ場所に残る）
+  $('#setVer').textContent = APP_VERSION;
+  $('#btnUpdate').addEventListener('click', () => {
+    try { sessionStorage.setItem(UPDATE_KEY, APP_VERSION); } catch (e) { /* 控えられなくても更新はできる */ }
+    $('#btnUpdate').disabled = true; $('#btnUpdate').textContent = '更新しています…';
+    location.reload();
+  });
+
+  document.addEventListener('click', e => {
+    const o = e.target.closest('[data-open]');
+    if (o) { openCard(+o.dataset.open); return; }
+    if (e.target.closest('[data-more]')) { state.limit += 100; renderPatient(); }
+  });
+  $('#dlgClose').addEventListener('click', closeDlg);
+  $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) closeDlg(); });
+  $('#dlg').addEventListener('close', () => { if (state.photoUrl) { URL.revokeObjectURL(state.photoUrl); state.photoUrl = null; } $('#dlgPhoto').innerHTML = ''; });
+
+  renderAll();
+  // 前回このiPadに記憶した内容があれば、すぐに使えるようにする
+  restoreSaved().then(ok => {
+    if (ok) renderAll();
+    let from = null;
+    try { from = sessionStorage.getItem(UPDATE_KEY); sessionStorage.removeItem(UPDATE_KEY); } catch (e) { /* 何もしない */ }
+    if (from && from !== APP_VERSION) showNotice('新しい版（' + APP_VERSION + '）に更新しました。', 'ok');
+    else if (from) showNotice('新しい版は見つかりませんでした（今の版：' + APP_VERSION + '）。GitHubに上げてから反映されるまで、10分ほどかかることがあります。', 'warn');
+  });
+}
+init();
+</script>
+</body>
+</html>
