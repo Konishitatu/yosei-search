@@ -310,6 +310,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
       <li>カードの日付には年が書かれていないため、<b>今日にいちばん近い日付</b>として扱います（11月に見た「1/25」は来年の1月25日）。</li>
       <li>「カードを見る」を押すと、PDFに入っているカードの写真（1日量・日数・カクホの印など）と、読み取った文字をそのまま確認できます。</li>
       <li><b>カレンダー</b>：来局予想日ごとに、予製がどこまで進んでいるかを確かめます。日付を押すと、その日の患者さんが左（🍀＝精神科）と右（それ以外）に分かれて並びます。患者さんごとに「未作成／ピッキング済み／鑑査済／完成」のどれかを押して印を付けます。薬が足りないときは、段階とは別に、「カード」の左の「不足あり」を押して印を付けます（もう一度押すと外れます）。「不足あり」が付いたまま「完成」を押すと、不足分を補充したかを確かめてから完成にし、「不足あり」の印を消します。付けた印は、この端末の中にだけ記憶します。患者さんが来局してカードの来局予想日が新しくなると、印は「未作成」に戻ります。🍀にする医療機関は、右上の「設定」で選びます。カレンダーのタブは、最初は出ていません。使う端末で、「設定」→「カレンダー」の「表示する」を選ぶと出ます。</li>
+      <li><b>更新アプリのファイル</b>：更新アプリ（予製カード更新）で書き出したファイル（yosei-data-….zip）は、右上の「設定」→「PDF・ZIPを読み込む」で、そのファイルを1つだけ選んで読み込みます。来局予想日は年つきで入っているので、過ぎた日付もそのままの年で出ます。今より古いファイルを選んだときは、入れ替える前に確かめます。</li>
       <li><b>アプリの更新</b>：新しいファイルをGitHubに上げたあと、右上の「設定」→「最新の版に更新する」を押すと、新しい版に切り替わります。読み込んだ内容はそのまま残るので、ホーム画面のアイコンを作り直す必要はありません。</li>
       <li><b>読み取り結果の確認</b>：来局予想日・氏名・薬が読み取れなかったカード、写真だけのページ、同じ患者さんのカードが2枚あるときは、右上の「設定」の中の「読み取り結果の確認」に一覧で出ます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。</li>
       <li><b>データの更新</b>：PDFを入れ直したら、右上の「設定」（歯車のマーク）→「PDF・ZIPを読み込む」でもう一度読み込みます。前の内容とまるごと入れ替わり、この端末の記憶も新しくなります。画面の上に出る「◯/◯ 来局分まで更新済み」は、PDFのファイル名に入っている日付です（その日に来局した患者さんまで、カードを更新してあるという意味）。ファイル名に日付がないときは、「いちばん新しいPDF」の作成日時を表示します。</li>
@@ -327,7 +328,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
   <div class="set-body">
     <section class="set-sec">
       <h4>データの読み込み</h4>
-      <p class="note">予製カードのPDF（またはZIP）を読み込みます。読み込むと、前の内容とまるごと入れ替わります。</p>
+      <p class="note">予製カードのPDF（またはZIP）を読み込みます。更新アプリ（予製カード更新）で書き出したファイル（yosei-data-….zip）も、ここから読み込みます。読み込むと、前の内容とまるごと入れ替わります（カレンダーの印は残ります）。</p>
       <div class="loadbar">
         <button class="btn primary" id="btnFiles" type="button">PDF・ZIPを読み込む</button>
         <button class="btn" id="btnFolder" type="button">フォルダーごと読み込む</button>
@@ -403,7 +404,7 @@ dialog::backdrop{background:rgba(15,20,25,.5)}
 
 <script>
 'use strict';
-const APP_VERSION = 'v2026.11.11-6';
+const APP_VERSION = 'v2026.11.12-1';
 
 /* 文字の変換表：Adobe-Japan1 の文字番号（CID）→ Unicode。
    出典：Adobe "mapping-resources-pdf" Adobe-Japan1-UCS2 (Version 10.002)。異体字セレクタは除去済み。
@@ -1371,7 +1372,9 @@ function matchPatient(c, terms) {
    ========================================================= */
 function todayMidnight() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
 // 年が書かれていないので、今日にいちばん近い日付として扱う
+// 更新アプリのデータには年つきの来局予想日（c.visit）が入っているので、あればそれをそのまま使う
 function inferVisit(c, today) {
+  if (c.visit) { const d = parseISODate(c.visit); if (d) return { date: d, diff: Math.round((d - today) / 86400000) }; }
   if (!c.month) return null;
   let best = null;
   for (const y of [today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1]) {
@@ -1428,6 +1431,7 @@ function parseISODate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); 
    ========================================================= */
 const state = {
   files: [], cards: [], nextId: 1, loadedAt: null,
+  src: null,   // 更新アプリのデータを読み込んだときの控え { kind: 'data', name, exportedAt, updatedThrough, app, paused }。PDFのときは null
   tab: 'drug', mode: 'all', sort: 'asc', limits: { drug: 200, patient: 200 },
   pick: null, varAll: false,   // 薬の候補（カードでの書き方）から選んだもの／候補を全部出すか
   photoUrl: null, dlgSeq: 0,
@@ -1444,7 +1448,7 @@ const STAGES = ['未作成', 'ピッキング済み', '鑑査済', '完成'];
 // 患者さん（氏名＋生年月日＋医療機関）と来局予想日で見分ける。PDFを読み込み直しても印は残り、
 // 来局してカードの来局予想日が変わると、新しい日付の分は「未作成」から始まる
 function statusKey(c) {
-  return (c.nameKey ? c.nameKey + '|' + c.birthDigits + '|' + c.hospKey : '?|' + c.fileRec.key + '|' + c.page) + '|' + c.month + '/' + c.day;
+  return (c.nameKey ? c.nameKey + '|' + c.birthDigits + '|' + c.hospKey : c.no ? '?|#' + c.no : '?|' + c.fileRec.key + '|' + c.page) + '|' + c.month + '/' + c.day;
 }
 function stageOf(c) { const e = state.status.get(statusKey(c)); return e ? e.s : 0; }
 function shortOf(c) { const e = state.status.get(statusKey(c)); return !!(e && e.f); }
@@ -1478,6 +1482,55 @@ function makeCard(rec, pageNo, lines, images) {
   c.photo = photo ? { ss: photo.ss, se: photo.se, m: photo.m } : null;
   c.hasImage = images.length > 0;
   return finishCard(c, p.drugs);
+}
+
+/* ---------- 更新アプリ（予製カード更新）が書き出した「全部入りのファイル」 ----------
+   ZIPの中の yosei-data.json（format: "yosei-data"・version 1）と photos/<番号>.jpg。形は「予製更新アプリ_構想メモ」のとおり */
+const DATA_VERSION = 1;
+const str = v => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '');
+function dataBirth(b) {
+  if (!b || typeof b !== 'object') return null;
+  const yy = +b.yy, mm = +b.mm, dd = +b.dd;
+  if (!(yy >= 1 && yy <= 99 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31)) return null;
+  const era = /^[MTSHR]$/.test(b.era) ? b.era : '', y = Number.isInteger(b.y) && b.y > 1800 && b.y < 2200 ? b.y : null;
+  return { era, yy, mm, dd, y, src: b.src === 'w' || b.src === 'wj' ? b.src : 'j' };
+}
+// 確認が必要かどうかは、読み取った文字ではなく、カードの中身から決める
+function dataIssues(c, nDrugs, extraWarns) {
+  const issues = [], warns = [];
+  if (!c.name && !c.kana && !c.hospital && !c.birth && !c.visit && !nDrugs) issues.push(c.hasImage ? '文字がありません（写真だけのページ）' : '中身がありません');
+  else {
+    if (!c.visit) issues.push('来局予想日がありません');
+    if (!c.name) issues.push('氏名がありません');
+    if (!nDrugs) issues.push('薬がありません');
+    if (!c.birth) warns.push('生年月日なし');
+    if (!c.kana) warns.push('ふりがななし');
+    if (!c.hospital) warns.push('医療機関なし');
+  }
+  for (const w of extraWarns) if (typeof w === 'string' && w && !warns.includes(w) && !issues.includes(w)) warns.push(w);
+  return { issues, warns };
+}
+function makeDataCard(rec, j, ent) {
+  const visit = parseISODate(j.visit), drugs = (Array.isArray(j.drugs) ? j.drugs : []).map(d => str(d && typeof d === 'object' ? d.text : d)).filter(Boolean);
+  const c = {
+    id: state.nextId++, fileRec: rec, page: j.id, no: j.id, rawLines: [],
+    visit: visit ? j.visit : '', month: visit ? visit.getMonth() + 1 : null, day: visit ? visit.getDate() : null,
+    name: str(j.name), kana: str(j.kana), birth: dataBirth(j.birth), hospital: str(j.hospital),
+    hasImage: !!j.photo, photo: ent ? { m: [1, 0, 0, 1, 0, 0], ent } : null,
+    updated: Date.parse(j.updatedAt) || null,
+  };
+  Object.assign(c, dataIssues(c, drugs.length, j.import && Array.isArray(j.import.warns) ? j.import.warns : []));
+  return finishCard(c, drugs);
+}
+// ZIPの中に yosei-data.json があれば、その場所を返す（フォルダーに入っていてもよい）
+function findDataJson(ents) {
+  return ents.find(e => e.name.split('/').pop() === 'yosei-data.json' && !/(^|\/)__MACOSX\//.test(e.name)) || null;
+}
+async function readDataJson(file, ent) {
+  if (ent.usize > 64 * 1024 * 1024) throw new Error('big');
+  const d = JSON.parse(new TextDecoder('utf-8').decode(await zipEntryBytes(file, ent)));
+  if (!d || d.format !== 'yosei-data' || !Array.isArray(d.cards)) throw new Error('format');
+  return d;
 }
 
 /* =========================================================
@@ -1588,12 +1641,13 @@ async function savedPhoto(key) {
 function buildMeta() {
   const idx = new Map(state.files.map((f, i) => [f, i]));
   return {
-    schema: SCHEMA, pv: PARSER_VERSION, gen: state.gen, loadedAt: state.loadedAt.getTime(),
-    files: state.files.map(f => ({ key: f.key, zip: f.zip || '', created: f.created ? f.created.getTime() : null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0 })),
+    schema: SCHEMA, pv: PARSER_VERSION, gen: state.gen, loadedAt: state.loadedAt.getTime(), src: state.src,
+    files: state.files.map(f => ({ key: f.key, zip: f.zip || '', data: !!f.data, created: f.created ? f.created.getTime() : null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0 })),
     cards: state.cards.map(c => ({
       id: c.id, f: idx.get(c.fileRec), page: c.page, rawLines: c.rawLines, month: c.month, day: c.day,
       name: c.name, kana: c.kana, birth: c.birth, hospital: c.hospital, drugs: c.drugs.map(d => d.text),
       issues: c.issues, warns: c.warns, hasImage: c.hasImage, photo: c.photo ? c.photo.m : null,
+      visit: c.visit || '', no: c.no || 0, updated: c.updated || null,
     })),
   };
 }
@@ -1605,9 +1659,11 @@ async function restoreSaved() {
   } catch (e) { return false; }
   if (!meta || meta.schema !== SCHEMA || !Array.isArray(meta.cards)) return false;
   if (state.loading || state.files.length) return false; // すでに新しく読み込み始めている
-  const reparse = meta.pv !== PARSER_VERSION;   // 前の版で読み取った内容
+  // 前の版で読み取った内容は読み取り直す。更新アプリのデータは、読み取った文字ではなく中身そのものなので読み取り直さない
+  const reparse = meta.pv !== PARSER_VERSION && !meta.src;
+  state.src = meta.src || null;
   state.gen = meta.gen;
-  state.files = meta.files.map(f => ({ key: f.key, zip: f.zip || '', file: null, ent: null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0, created: f.created ? new Date(f.created) : null }));
+  state.files = meta.files.map(f => ({ key: f.key, zip: f.zip || '', data: !!f.data, file: null, ent: null, pages: f.pages, error: f.error, blank: f.blank || 0, skipped: f.skipped || 0, created: f.created ? new Date(f.created) : null }));
   let maxId = 0;
   state.cards = meta.cards.map(s => {
     maxId = Math.max(maxId, s.id);
@@ -1615,6 +1671,7 @@ async function restoreSaved() {
       id: s.id, fileRec: state.files[s.f], page: s.page, rawLines: s.rawLines, month: s.month, day: s.day,
       name: s.name, kana: s.kana, birth: s.birth, hospital: s.hospital, issues: s.issues, warns: s.warns,
       hasImage: s.hasImage, photo: s.photo ? { m: s.photo } : null,
+      visit: s.visit || '', no: s.no || 0, updated: s.updated || null,
     };
     if (!reparse) return finishCard(c, s.drugs);
     const p = parseCardText(s.rawLines || []);
@@ -1654,6 +1711,7 @@ async function recBytes(rec) {
 }
 async function photoBlob(c) {
   const r = c.fileRec;
+  if (r.file && c.photo.ent) return new Blob([await zipEntryBytes(r.file, c.photo.ent)], { type: 'image/jpeg' });
   if (r.file && c.photo.ss !== undefined) {
     if (!r.ent) return r.file.slice(c.photo.ss, c.photo.se, 'image/jpeg');
     const b = await recBytes(r);
@@ -1676,10 +1734,33 @@ async function loadFiles(entries) {
     showNotice('この端末のブラウザでは読み込めません。パソコンはChromeの最新版、iPadはiPadOS 16.4以降のSafariで開いてください。', 'bad');
     return;
   }
-  // 読み込むたびに、前の内容とまるごと入れ替える
+  // ZIPの中身を先に確かめる。更新アプリが書き出した「全部入りのファイル」なら、PDFではなくその形として読む
+  let data = null, nData = 0;
+  for (const z of zipIn) {
+    try { z.ents = await listZip(z.file); } catch (err) { z.ents = null; }
+    const je = z.ents && findDataJson(z.ents);
+    if (je) { nData++; data = { z, je }; }
+  }
+  const fmtAt = ms => { const d = new Date(ms); return fmtMD(d) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+  if (data) {
+    if (nData > 1 || pdfIn.length || zipIn.length > 1) { showNotice('更新アプリで書き出したファイル（yosei-data-….zip）は、それだけを1つ選んで読み込んでください。今の内容は変えていません。', 'warn'); return; }
+    try { data.json = await readDataJson(data.z.file, data.je); }
+    catch (err) { showNotice('更新アプリのファイルとして読み取れませんでした（途中で切れているか、壊れているようです）。今の内容は変えていません。', 'bad'); return; }
+    if (!(data.json.version >= 1 && data.json.version <= DATA_VERSION)) {
+      showNotice('このファイルは新しい形（version ' + String(data.json.version).slice(0, 8) + '）で、今の版では読めません。右上の「設定」→「最新の版に更新する」をしてから、もう一度読み込んでください。今の内容は変えていません。', 'bad');
+      return;
+    }
+    data.at = Date.parse(data.json.exportedAt) || null;
+    // 古いファイルを選んでしまったときに、新しい内容を消さないように確かめる
+    if (state.src && state.src.exportedAt && data.at && data.at < state.src.exportedAt &&
+      !window.confirm('今入っているデータ（' + fmtAt(state.src.exportedAt) + ' に書き出し）より古いファイルです（' + fmtAt(data.at) + ' に書き出し）。\nこのファイルに入れ替えますか？')) return;
+  } else if (state.src && state.files.length &&
+    !window.confirm('今は、更新アプリのデータ（' + (state.src.exportedAt ? fmtAt(state.src.exportedAt) + ' に書き出し' : '書き出した日時は不明') + '）が入っています。\nPDFの内容に入れ替えますか？（更新アプリで直した内容は、PDFには入っていません）')) return;
+  // 読み込むたびに、前の内容とまるごと入れ替える。1枚も読めなかったときは、前の内容に戻す
   closeDlg();
+  const prev = state.files.length ? { files: state.files, cards: state.cards, gen: state.gen, restored: state.restored, saved: state.saved, loadedAt: state.loadedAt, src: state.src, nextId: state.nextId } : null;
   state.loading = true;
-  state.files = []; state.cards = [];
+  state.files = []; state.cards = []; state.src = null;
   state.gen = 'g' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); state.restored = false;
   let pending = [], saveOk = true;
   const flush = async () => {
@@ -1689,22 +1770,44 @@ async function loadFiles(entries) {
   };
   $('#progress').hidden = false;
   setProgress('ファイルを確認中…', 0);
+  let lastPause = performance.now();
   const jobs = [];
-  for (const e of pdfIn) jobs.push({ key: e.rel || e.file.name, file: e.file, ent: null });
-  for (const z of zipIn) {
-    const zname = z.rel || z.file.name;
-    try {
-      for (const ent of await listZip(z.file)) {
-        const base = ent.name.split('/').pop();
-        if (!/\.pdf$/i.test(base) || base.startsWith('._') || /(^|\/)__MACOSX\//.test(ent.name)) continue;
-        jobs.push({ key: ent.name, zip: zname, file: z.file, ent });
+  if (data) {
+    // 更新アプリのデータ：カードの中身はそのまま使い、写真はZIPの中のJPEGをそのまま記憶する
+    const zname = data.z.rel || data.z.file.name, d = data.json;
+    const rec = { key: zname, data: true, file: data.z.file, ent: null, pages: d.cards.length, error: '', created: data.at ? new Date(data.at) : null };
+    state.files.push(rec);
+    const dir = data.je.name.slice(0, data.je.name.length - 'yosei-data.json'.length);
+    const byName = new Map(data.z.ents.map(e => [e.name, e]));
+    let paused = 0, nophoto = 0;
+    for (let i = 0; i < d.cards.length; i++) {
+      const j = d.cards[i];
+      if (!j || typeof j !== 'object' || !Number.isInteger(j.id) || j.id < 1) continue;
+      if (j.paused === true) { paused++; continue; }   // 休止中のカードは、検索にもカレンダーにも出さない
+      let ent = typeof j.photo === 'string' && j.photo ? byName.get(dir + j.photo) || null : null, blob = null;
+      if (ent) {
+        try { const b = await zipEntryBytes(data.z.file, ent); if (b.length > 3 && b[0] === 0xFF && b[1] === 0xD8) blob = new Blob([b], { type: 'image/jpeg' }); } catch (err) { /* 下で「写真なし」にする */ }
+        if (!blob) ent = null;
       }
-    } catch (err) {
-      state.files.push({ key: zname, file: null, ent: null, pages: 0, error: 'ZIPファイルとして読み取れませんでした', created: null });
+      if (j.photo && !ent) nophoto++;
+      const card = makeDataCard(rec, j, ent);
+      state.cards.push(card);
+      if (blob && saveOk) { pending.push([state.gen + ':' + card.id, blob]); if (pending.length >= 25) await flush(); }
+      if (performance.now() - lastPause > 60) { setProgress('読み込み中… ' + (i + 1) + ' / ' + d.cards.length + ' 枚', (i + 1) / d.cards.length); await pause(); lastPause = performance.now(); }
+    }
+    state.src = { kind: 'data', name: zname, exportedAt: data.at, updatedThrough: parseISODate(d.updatedThrough) ? d.updatedThrough : '', app: str(d.app).slice(0, 40), paused, nophoto };
+  }
+  for (const e of pdfIn) jobs.push({ key: e.rel || e.file.name, file: e.file, ent: null });
+  for (const z of data ? [] : zipIn) {
+    const zname = z.rel || z.file.name;
+    if (!z.ents) { state.files.push({ key: zname, file: null, ent: null, pages: 0, error: 'ZIPファイルとして読み取れませんでした', created: null }); continue; }
+    for (const ent of z.ents) {
+      const base = ent.name.split('/').pop();
+      if (!/\.pdf$/i.test(base) || base.startsWith('._') || /(^|\/)__MACOSX\//.test(ent.name)) continue;
+      jobs.push({ key: ent.name, zip: zname, file: z.file, ent });
     }
   }
   jobs.sort((a, b) => a.key.localeCompare(b.key, 'ja', { numeric: true }));
-  let lastPause = performance.now();
   for (let i = 0; i < jobs.length; i++) {
     const rec = Object.assign({ pages: 0, error: '', created: null }, jobs[i]);
     state.files.push(rec);
@@ -1736,6 +1839,15 @@ async function loadFiles(entries) {
     setProgress('読み込み中… ' + (i + 1) + ' / ' + jobs.length + ' 件', (i + 1) / jobs.length);
     if (performance.now() - lastPause > 60) { await pause(); lastPause = performance.now(); }
   }
+  // 1枚も読めなかったときは、前の内容を消さずに戻す（PDFの入っていないZIPなどを選んでも、中身が空にならないように）
+  if (!state.cards.length && prev) {
+    const why = state.files.find(f => f.error);
+    Object.assign(state, prev, { loading: false });
+    $('#progress').hidden = true;
+    renderAll();
+    showNotice('カードを1枚も読み取れなかったので、前の内容のままにしました。' + (why ? '（' + why.key + '：' + why.error + '）' : '（選んだファイルに、予製カードのPDFが入っていませんでした）'), 'warn');
+    return;
+  }
   state.loadedAt = new Date();
   computeDup();
   // この端末に記憶する
@@ -1753,6 +1865,7 @@ async function loadFiles(entries) {
   renderAll();
   const nIssue = state.cards.filter(cardHasIssue).length, nErr = state.files.filter(f => f.error).length;
   // 短い文にして、数秒で消えても読めるようにする
+  if (!state.files.length) { showNotice('選んだファイルに、予製カードのPDFが入っていませんでした。', 'warn'); return; }
   const done = '読み込みが終わりました（カード ' + state.cards.length + ' 枚）。';
   const memo = saveOk ? '' : 'この端末には記憶できませんでした（ページを閉じると消えます）。';
   if (nIssue || nErr) {
@@ -1843,6 +1956,20 @@ function renderAll() {
     return;
   }
   const t = state.loadedAt;
+  const memo = state.saved === false;
+  if (state.src) {
+    // 更新アプリのデータ：何日の来局分まで更新済みか（わからなければ、書き出した日時）を出す
+    const src = state.src, ut = parseISODate(src.updatedThrough), ex = src.exportedAt ? new Date(src.exportedAt) : null;
+    const upd = ut ? '<b class="upd">' + fmtMD(ut) + '（' + WD[ut.getDay()] + '）来局分まで更新済み</b>'
+      : ex ? '<b class="upd">' + fmtMD(ex) + '（' + WD[ex.getDay()] + '）' + pad2(ex.getHours()) + ':' + pad2(ex.getMinutes()) + ' に書き出したデータ</b>' : '';
+    $('#status').innerHTML = upd + (upd ? '／' : '') + esc((state.restored ? 'この端末に記憶している内容' : '読み込み済み') + '：カード ' + state.cards.length + ' 枚（更新アプリのデータ）／' +
+      fmtDT(t) + ' に読み込み' + (memo ? '（この端末には記憶していません）' : ''));
+    $('#setStatus').innerHTML = (upd ? upd + '<br>' : '') + esc('カード ' + state.cards.length + ' 枚（更新アプリのデータ）。' + fmtDT(t) + ' に読み込みました。' +
+      (ex ? '更新アプリで ' + fmtDT(ex) + ' に書き出したファイルです。' : '') +
+      (src.paused ? '休止中のカード ' + src.paused + ' 枚は出していません。' : '') +
+      (src.nophoto ? '写真がファイルに入っていなかったカードが ' + src.nophoto + ' 枚あります。' : '') +
+      (memo ? 'この端末には記憶していません。' : 'この端末に記憶しています。')) + '<br>' + esc('ファイル名：' + src.name);
+  } else {
   const newest = state.files.reduce((m, f) => (f.created && (!m || f.created > m) ? f.created : m), null);
   // ファイル名の日付＝その日に来局した患者さんまでカードを更新してある、という意味
   const fdates = state.files.filter(f => !f.error).map(fileDate).filter(Boolean);
@@ -1859,6 +1986,7 @@ function renderAll() {
   $('#setStatus').innerHTML = (upd ? upd.replace(/／$/, '') + '<br>' : '') + esc('カード ' + state.cards.length + ' 枚（PDF ' + state.files.length + ' 件）。' + fmtDT(t) + ' に読み込みました。' +
     (newest ? 'いちばん新しいPDFは ' + fmtDT(newest) + ' 作成です。' : '') + (state.saved === false ? 'この端末には記憶していません。' : 'この端末に記憶しています。')) +
     (names.length ? '<br>' + esc('ファイル名：' + names.join('、')) : '');
+  }
   renderCheck();
   renderClover(); applyCal();
   switchTab(state.tab);
@@ -2098,7 +2226,8 @@ function renderCheck() {
   let head;
   if (bad.length || errs.length) {
     head = '<p class="ck-count bad">' + (bad.length ? '確認が必要なカード：' + bad.length + ' 枚' : '') + (bad.length && errs.length ? '／' : '') + (errs.length ? '読めなかったPDF：' + errs.length + ' 件' : '') + '</p>' +
-      '<p class="note">「見る」で、カードの写真と読み取った文字を確かめられます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。</p>';
+      '<p class="note">' + (state.src ? '「見る」で、カードの写真と中身を確かめられます。直すときは、元のデータを直してから、更新アプリでファイルを書き出し直して、もう一度読み込みます。'
+        : '「見る」で、カードの写真と読み取った文字を確かめられます。直すときは、GoodNotesでそのページを直してからPDFを書き出し直し、もう一度読み込みます。') + '</p>';
   } else {
     head = '<p class="ck-count ok">確認が必要なカードはありません。</p>';
   }
@@ -2109,7 +2238,7 @@ function renderCheck() {
     const v = inferVisit(c, today);
     return '<div class="ck-item" data-card="' + c.id + '"><div class="ck-main">' +
       '<div class="ck-name">' + esc(c.name || '（氏名不明）') + (c.kana ? '<span class="kana">' + esc(c.kana) + '</span>' : '') + '</div>' +
-      '<div class="ck-sub">' + esc(c.fileRec.key) + '・' + c.page + 'ページ目' + (v ? '／来局予想日 ' + esc(fmtYMD(v.date)) : '') + '</div>' +
+      '<div class="ck-sub">' + (c.no ? 'カード番号 ' + c.no : esc(c.fileRec.key) + '・' + c.page + 'ページ目') + (v ? '／来局予想日 ' + esc(fmtYMD(v.date)) : '') + '</div>' +
       '<div>' + cardTags(c, false) + '</div></div>' +
       '<button type="button" class="btn small" data-open="' + c.id + '">見る</button></div>';
   }).join('');
@@ -2133,17 +2262,20 @@ function openCard(id) {
   const tags = cardTags(c, true);
   $('#dlgInfo').innerHTML =
     '<dl class="kv">' +
-    '<dt>来局予想日</dt><dd>' + (v ? esc(fmtYMD(v.date)) + '　' + esc(relLabel(v.diff)) : '読み取れませんでした') + '</dd>' +
+    '<dt>来局予想日</dt><dd>' + (v ? esc(fmtYMD(v.date)) + '　' + esc(relLabel(v.diff)) : c.no ? '入っていません' : '読み取れませんでした') + '</dd>' +
     '<dt>ふりがな</dt><dd>' + esc(c.kana || '—') + '</dd>' +
     '<dt>生年月日</dt><dd>' + (c.birth ? esc(fmtBirth(c.birth)) : '—') + '</dd>' +
     '<dt>医療機関</dt><dd>' + esc(c.hospital || '—') + '</dd>' +
-    '<dt>ファイル</dt><dd>' + esc(c.fileRec.key) + '（' + c.page + 'ページ目）</dd>' +
-    '<dt>PDFの作成</dt><dd>' + (c.fileRec.created ? esc(fmtYMD(c.fileRec.created) + ' ' + pad2(c.fileRec.created.getHours()) + ':' + pad2(c.fileRec.created.getMinutes())) : '—') + '</dd></dl>' +
+    (c.no
+      ? '<dt>カード番号</dt><dd>' + c.no + '（更新アプリのデータ）</dd>' +
+        '<dt>最後の更新</dt><dd>' + (c.updated ? esc(fmtDT(new Date(c.updated))) : '—') + '</dd></dl>'
+      : '<dt>ファイル</dt><dd>' + esc(c.fileRec.key) + '（' + c.page + 'ページ目）</dd>' +
+        '<dt>PDFの作成</dt><dd>' + (c.fileRec.created ? esc(fmtYMD(c.fileRec.created) + ' ' + pad2(c.fileRec.created.getHours()) + ':' + pad2(c.fileRec.created.getMinutes())) : '—') + '</dd></dl>') +
     (tags ? '<div>' + tags + '</div>' : '') +
     '<h4>カードの薬（' + c.drugs.length + ' 件）</h4>' +
     (c.drugs.length ? '<ul class="res-drugs">' + c.drugs.map(d => '<li>' + esc(d.text) + '</li>').join('') + '</ul>' : '<p>—</p>') +
-    '<h4>PDFから読み取った文字（そのまま）</h4>' +
-    (c.rawLines.length ? '<ol class="raw">' + c.rawLines.map(l => '<li>' + esc(l).replace(/\t/g, '<span class="sep">｜</span>') + '</li>').join('') + '</ol>' : '<p>—</p>');
+    (c.no ? '' : '<h4>PDFから読み取った文字（そのまま）</h4>' +
+    (c.rawLines.length ? '<ol class="raw">' + c.rawLines.map(l => '<li>' + esc(l).replace(/\t/g, '<span class="sep">｜</span>') + '</li>').join('') + '</ol>' : '<p>—</p>'));
   const box = $('#dlgPhoto');
   if (state.photoUrl) { URL.revokeObjectURL(state.photoUrl); state.photoUrl = null; }
   const seq = ++state.dlgSeq;
@@ -2215,7 +2347,7 @@ function init() {
   $('#inFolder').addEventListener('change', e => { const fs = Array.from(e.target.files).map(f => ({ file: f, rel: f.webkitRelativePath || '' })); e.target.value = ''; if (fs.length) { closeSettings(); loadFiles(fs); } });
   $('#btnClear').addEventListener('click', async () => {
     if (!window.confirm('読み込んだ内容と、カレンダーに付けた印を、この端末の記憶からも消します。よろしいですか？\n（もう一度使うときは、PDF・ZIPを読み込み直します）')) return;
-    state.files = []; state.cards = []; state.gen = ''; state.restored = false; state.saved = null;
+    state.files = []; state.cards = []; state.gen = ''; state.restored = false; state.saved = null; state.src = null;
     state.status.clear();
     closeDlg(); closeSettings();
     try { await clearSaved(); } catch (e) { /* 記憶がない場合など */ }
